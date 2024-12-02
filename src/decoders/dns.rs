@@ -236,7 +236,8 @@ fn parse_svcb(data: &[u8]) -> nom::IResult<&[u8], String> {
     if unknown_type == dns_over_https {
         let (dns_data, url_entry_size) = take(size_of::<u8>())(dns_data)?;
         let (_, url_size) = be_u8(url_entry_size)?;
-        return extract_string_size(dns_data, url_size.into());
+        let (rest, s) = extract_string_size(dns_data, url_size.into())?;
+        return Ok((rest, s.to_owned()));
     }
 
     // ALPN = Application Layer Protocol Negotation

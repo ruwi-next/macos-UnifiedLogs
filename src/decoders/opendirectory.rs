@@ -235,7 +235,7 @@ fn get_member_string(data: &[u8]) -> nom::IResult<&[u8], String> {
 
     let (_, value) = extract_string(string_data)?;
     if value != "Could not extract string" {
-        string_value = value;
+        string_value = value.to_owned();
     }
 
     // Nom of end string character
