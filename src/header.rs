@@ -47,8 +47,8 @@ pub struct HeaderChunk {
 
 impl HeaderChunk {
     /// Parse the Unified Log tracev3 header data
-    pub fn parse_header(data: &[u8]) -> nom::IResult<&[u8], HeaderChunk> {
-        let mut header_chunk = HeaderChunk {
+    pub fn parse_header(data: &[u8]) -> nom::IResult<&[u8], Self> {
+        let mut header_chunk = Self {
             chunk_tag: 0,
             chunk_sub_tag: 0,
             chunk_data_size: 0,
@@ -173,7 +173,7 @@ impl HeaderChunk {
         let build_version = from_utf8(build_version_string);
         match build_version {
             Ok(results) => {
-                header_chunk.build_version_string = results.trim_end_matches('\0').to_string()
+                header_chunk.build_version_string = results.trim_end_matches('\0').to_string();
             }
             Err(err) => warn!(
                 "[macos-unifiedlogs] Failed to get build version from header: {:?}",
@@ -184,7 +184,7 @@ impl HeaderChunk {
         let hardware_info = from_utf8(hardware_model_string);
         match hardware_info {
             Ok(results) => {
-                header_chunk.hardware_model_string = results.trim_end_matches('\0').to_string()
+                header_chunk.hardware_model_string = results.trim_end_matches('\0').to_string();
             }
             Err(err) => warn!(
                 "[macos-unifiedlogs] Failed to get hardware info from header: {:?}",
@@ -193,7 +193,7 @@ impl HeaderChunk {
         }
 
         let (_, boot_uuid_be) = be_u128(boot_uuid)?;
-        header_chunk.boot_uuid = format!("{:X}", boot_uuid_be);
+        header_chunk.boot_uuid = format!("{boot_uuid_be:X}");
 
         Ok((input, header_chunk))
     }

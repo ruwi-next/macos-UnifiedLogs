@@ -67,6 +67,7 @@ pub struct FirehoseItemType {
     offset: u16,
     message_string_size: u16,
     pub message_strings: String,
+    #[allow(dead_code)]
     pub backtrace_strings: Vec<String>, // Only exists if log entry flag "has_context_data" is set
 }
 
@@ -87,8 +88,8 @@ impl FirehosePreamble {
     /// Parse the start of the Firehose data
     pub fn parse_firehose_preamble(
         firehose_input_data: &[u8],
-    ) -> nom::IResult<&[u8], FirehosePreamble> {
-        let mut firehose_data = FirehosePreamble {
+    ) -> nom::IResult<&[u8], Self> {
+        let mut firehose_data = Self {
             chunk_tag: 0,
             chunk_sub_tag: 0,
             chunk_data_size: 0,
@@ -162,7 +163,7 @@ impl FirehosePreamble {
         // Go through all the public data associated with log Firehose entry
         while !public_data.is_empty() {
             let (firehose_input, firehose_public_data) =
-                FirehosePreamble::parse_firehose(public_data)?;
+                Self::parse_firehose(public_data)?;
             public_data = firehose_input;
             if !log_types.contains(&firehose_public_data.unknown_log_activity_type)
                 || public_data.len() < 24
@@ -241,7 +242,7 @@ impl FirehosePreamble {
                     - firehose_private_data_virtual_offset;
                 let (private_string_start, _) = take(string_offset)(private_input)?;
                 let (_, _) =
-                    FirehosePreamble::parse_private_data(private_string_start, &mut data.message)?;
+                    Self::parse_private_data(private_string_start, &mut data.message)?;
             }
             input = private_input;
         }
@@ -278,7 +279,7 @@ impl FirehosePreamble {
         while &item_count < firehose_number_items {
             // Get non-number values first since the values are at the end of the of the log (chunk) entry data
             let (item_value_input, mut item) =
-                FirehosePreamble::get_firehose_items(firehose_input)?;
+                Self::get_firehose_items(firehose_input)?;
             firehose_input = item_value_input;
 
             // Precision items just contain the length for the actual item
@@ -292,9 +293,9 @@ impl FirehosePreamble {
             // Firehose number item values immediately follow the item type
             if number_item_type.contains(&item.item_type) {
                 let (item_value_input, message_number) =
-                    FirehosePreamble::parse_item_number(firehose_input, u16::from(item.item_size))?;
+                    Self::parse_item_number(firehose_input, u16::from(item.item_size))?;
 
-                item.message_strings = format!("{}", message_number);
+                item.message_strings = format!("{message_number}");
                 firehose_input = item_value_input;
                 item_count += 1;
                 items_data.push(item);
@@ -318,7 +319,7 @@ impl FirehosePreamble {
         if (firehose_flags & has_context_data) != 0 {
             debug!("[macos-unifiedlogs] Identified Backtrace data in Firehose log chunk");
             let (backtrace_input, backtrace_data) =
-                FirehosePreamble::get_backtrace_data(firehose_input)?;
+                Self::get_backtrace_data(firehose_input)?;
             firehose_input = backtrace_input;
             firehose_item_data.backtrace_strings = backtrace_data;
         } else if firehose_input.len() > backtrace_signature_size {
@@ -326,7 +327,7 @@ impl FirehosePreamble {
             let (_, backtrace_sig) = take(backtrace_signature_size)(firehose_input)?;
             if backtrace_signature == backtrace_sig {
                 let (backtrace_input, backtrace_data) =
-                    FirehosePreamble::get_backtrace_data(firehose_input)?;
+                    Self::get_backtrace_data(firehose_input)?;
                 firehose_input = backtrace_input;
                 firehose_item_data.backtrace_strings = backtrace_data;
             }
@@ -369,7 +370,7 @@ impl FirehosePreamble {
                 break;
             }
             if string_item.contains(&item.item_type) {
-                let (item_value_input, message_string) = FirehosePreamble::parse_item_string(
+                let (item_value_input, message_string) = Self::parse_item_string(
                     firehose_input,
                     &item.item_type,
                     item.message_string_size,
@@ -436,12 +437,12 @@ impl FirehosePreamble {
                 private_string_start = private_data;
                 firehose_info.message_strings = private_string;
             } else if firehose_info.item_type == private_number {
-                let (private_data, private_string) = FirehosePreamble::parse_item_number(
+                let (private_data, private_string) = Self::parse_item_number(
                     private_string_start,
                     firehose_info.item_size,
                 )?;
                 private_string_start = private_data;
-                firehose_info.message_strings = format!("{}", private_string);
+                firehose_info.message_strings = format!("{private_string}");
             }
         }
         Ok((private_string_start, ()))
@@ -645,7 +646,7 @@ impl FirehosePreamble {
         firehose_results.unknown_item = firehose_unknown_item;
         firehose_results.number_items = firehose_number_items;
 
-        let (_, firehose_item_data) = FirehosePreamble::collect_items(
+        let (_, firehose_item_data) = Self::collect_items(
             firehose_input,
             &firehose_number_items,
             &firehose_flags,
@@ -681,7 +682,7 @@ impl FirehosePreamble {
         while count < backtrace_uuid_count {
             let (uuid_input, uuid_data) = take(size_of::<u128>())(input)?;
             let (_, uuid) = be_u128(uuid_data)?;
-            uuid_vec.push(format!("{:X}", uuid));
+            uuid_vec.push(format!("{uuid:X}"));
             input = uuid_input;
             count += 1;
         }

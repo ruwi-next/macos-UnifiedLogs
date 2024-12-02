@@ -29,8 +29,8 @@ pub struct UUIDTextEntry {
 }
 impl UUIDText {
     /// Parse the UUID files in uuidinfo directory. Contains the base log message string
-    pub fn parse_uuidtext(data: &[u8]) -> nom::IResult<&[u8], UUIDText> {
-        let mut uuidtext_data = UUIDText {
+    pub fn parse_uuidtext(data: &[u8]) -> nom::IResult<&[u8], Self> {
+        let mut uuidtext_data = Self {
             uuid: String::new(),
             signature: 0,
             unknown_major_version: 0,

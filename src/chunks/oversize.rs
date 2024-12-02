@@ -12,14 +12,14 @@ use nom::number::complete::{le_u16, le_u32, le_u64, le_u8};
 use std::mem::size_of;
 
 #[derive(Debug, Clone)]
-pub struct Oversize {
+pub struct Oversize<'a> {
     pub chunk_tag: u32,
     pub chunk_subtag: u32,
     pub chunk_data_size: u64,
     pub first_proc_id: u64,
     pub second_proc_id: u32,
     pub ttl: u8,
-    pub unknown_reserved: Vec<u8>, // 3 bytes
+    pub unknown_reserved: &'a [u8], // 3 bytes
     pub continuous_time: u64,
     pub data_ref_index: u32,
     pub public_data_size: u16,
@@ -27,9 +27,9 @@ pub struct Oversize {
     pub message_items: FirehoseItemData,
 }
 
-impl Oversize {
+impl<'a> Oversize<'a> {
     /// Parse the oversize log entry. Oversize entries contain strings that are too large to fit in a normal Firehose log entry
-    pub fn parse_oversize(data: &[u8]) -> nom::IResult<&[u8], Oversize> {
+    pub fn parse_oversize(data: &'a [u8]) -> nom::IResult<&'a [u8], Self> {
         let mut oversize_results = Oversize {
             chunk_tag: 0,
             chunk_subtag: 0,
@@ -37,7 +37,7 @@ impl Oversize {
             first_proc_id: 0,
             second_proc_id: 0,
             ttl: 0,
-            unknown_reserved: Vec::new(),
+            unknown_reserved: &[],
             continuous_time: 0,
             data_ref_index: 0,
             public_data_size: 0,
@@ -84,7 +84,7 @@ impl Oversize {
         oversize_results.data_ref_index = oversize_data_ref_index;
         oversize_results.public_data_size = oversize_public_data_size;
         oversize_results.private_data_size = oversize_private_data_size;
-        oversize_results.unknown_reserved = unknown_reserved.to_vec();
+        oversize_results.unknown_reserved = unknown_reserved;
 
         let mut oversize_data_size =
             (oversize_results.public_data_size + oversize_results.private_data_size) as usize;
@@ -115,7 +115,7 @@ impl Oversize {
         data_ref: u32,
         first_proc_id: u64,
         second_proc_id: u32,
-        oversize_data: &Vec<Oversize>,
+        oversize_data: &Vec<Self>,
     ) -> Vec<FirehoseItemInfo> {
         let mut message_strings: Vec<FirehoseItemInfo> = Vec::new();
 
@@ -373,7 +373,7 @@ mod tests {
             first_proc_id: 96,
             second_proc_id: 245,
             ttl: 0,
-            unknown_reserved: Vec::new(),
+            unknown_reserved: &[],
             continuous_time: 5609252490,
             data_ref_index: 1,
             public_data_size: 1092,

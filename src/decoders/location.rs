@@ -13,7 +13,7 @@ use nom::{
     bytes::complete::take,
     number::complete::{le_f64, le_i32, le_i64, le_u32, le_u8},
 };
-use std::mem::size_of;
+use std::{borrow::Cow, mem::size_of};
 
 struct LocationTrackerState {
     distance_filter: f64,
@@ -47,8 +47,8 @@ struct LocationTrackerState {
 }
 
 /// Convert Core Location Client Autherization Status code to string
-pub(crate) fn client_authorization_status(status: &str) -> String {
-    let message = match status {
+pub fn client_authorization_status(status: &str) -> &str {
+    (match status {
         "0" => "Not Determined",
         "1" => "Restricted",
         "2" => "Denied",
@@ -61,14 +61,14 @@ pub(crate) fn client_authorization_status(status: &str) -> String {
             );
             status
         }
-    };
-    message.to_string()
+    }) as _
 }
 
 /// Convert Core Location Daemon Status type to string
-pub(crate) fn daemon_status_type(status: &str) -> String {
+pub fn daemon_status_type(status: &str) -> &str {
     // Found in dyldcache liblog
-    let message = match status {
+
+    (match status {
         "0" => "Reachability Unavailable",
         "1" => "Reachability Small",
         "2" => "Reachability Large",
@@ -77,14 +77,14 @@ pub(crate) fn daemon_status_type(status: &str) -> String {
             warn!("Unknown Core Location daemon status type: {}", status);
             status
         }
-    };
-    message.to_string()
+    }) as _
 }
 
 /// Convert Core Location Subhaverester id to string
-pub(crate) fn subharvester_identifier(status: &str) -> String {
+pub fn subharvester_identifier(status: &str) -> &str {
     // Found in dyldcache liblog
-    let message = match status {
+
+    (match status {
         "1" => "Wifi",
         "2" => "Tracks",
         "3" => "Realtime",
@@ -105,12 +105,11 @@ pub(crate) fn subharvester_identifier(status: &str) -> String {
             );
             status
         }
-    };
-    message.to_string()
+    }) as _
 }
 
 /// Convert Core Location SQLITE code to string
-pub(crate) fn sqlite(status: &str) -> String {
+pub fn sqlite(status: &str) -> Cow<'static, str> {
     let decoded_data_result = decode_standard(status);
     let decoded_data = match decoded_data_result {
         Ok(result) => result,
@@ -119,25 +118,25 @@ pub(crate) fn sqlite(status: &str) -> String {
                 "[macos-unifiedlogs] Failed to base64 decodesqlite {}, error: {:?}",
                 status, err
             );
-            return String::from("Failed to base64 decode sqlite details");
+            return "Failed to base64 decode sqlite details".into();
         }
     };
 
     let message_result = get_sqlite_data(&decoded_data);
     match message_result {
-        Ok((_, result)) => result,
+        Ok((_, result)) => result.to_owned().into(),
         Err(err) => {
             error!(
                 "[macos-unifiedlogs] Failed to get sqlite {}, error code, error: {:?}",
                 status, err
             );
-            String::from("Failed to get sqlite error")
+            "Failed to get sqlite error".into()
         }
     }
 }
 
 /// Get the SQLITE error message
-fn get_sqlite_data(data: &[u8]) -> nom::IResult<&[u8], String> {
+fn get_sqlite_data(data: &[u8]) -> nom::IResult<&[u8], &str> {
     let (empty, sqlite_data) = take(size_of::<u32>())(data)?;
     let (_, sqlite_code) = le_u32(sqlite_data)?;
 
@@ -184,35 +183,35 @@ fn get_sqlite_data(data: &[u8]) -> nom::IResult<&[u8], String> {
         }
     };
 
-    Ok((empty, message.to_string()))
+    Ok((empty, message))
 }
 
 /// Parse the manager tracker state data
-pub(crate) fn client_manager_state_tracker_state(status: &str) -> String {
+pub fn client_manager_state_tracker_state(status: &str) -> Cow<'static, str> {
     let decoded_data_result = decode_standard(status);
     let decoded_data = match decoded_data_result {
         Ok(result) => result,
         Err(err) => {
             error!("[macos-unifiedlogs] Failed to base64 decode client manager tracker state {}, error: {:?}", status, err);
-            return String::from("Failed to base64 decode client manager tracker state");
+            return "Failed to base64 decode client manager tracker state".into();
         }
     };
 
     let message_result = get_state_tracker_data(&decoded_data);
     match message_result {
-        Ok((_, result)) => result,
+        Ok((_, result)) => result.into(),
         Err(err) => {
             error!(
                 "[macos-unifiedlogs] Failed to get client tracker data {}, error: {:?}",
                 status, err
             );
-            String::from("Failed to get client tracker data")
+            "Failed to get client tracker data".into()
         }
     }
 }
 
 /// Get the tracker data
-pub(crate) fn get_state_tracker_data(data: &[u8]) -> nom::IResult<&[u8], String> {
+pub fn get_state_tracker_data(data: &[u8]) -> nom::IResult<&[u8], String> {
     let (location_data, location_enabled_data) = take(size_of::<u32>())(data)?;
     let (location_data, location_restricted_data) = take(size_of::<u32>())(location_data)?;
 
@@ -223,38 +222,38 @@ pub(crate) fn get_state_tracker_data(data: &[u8]) -> nom::IResult<&[u8], String>
         location_data,
         format!(
             "{{\"locationRestricted\":{}, \"locationServicesenabledStatus\":{}}}",
-            lowercase_bool(&format!("{}", location_restricted)),
+            lowercase_bool(&format!("{location_restricted}")),
             location_enabled
         ),
     ))
 }
 
 /// Parse location tracker state data
-pub(crate) fn location_manager_state_tracker_state(status: &str) -> String {
+pub fn location_manager_state_tracker_state(status: &str) -> Cow<'static, str> {
     let decoded_data_result = decode_standard(status);
     let decoded_data = match decoded_data_result {
         Ok(result) => result,
         Err(err) => {
             error!("[macos-unifiedlogs] Failed to base64 decode location manager tracker state {}, error: {:?}", status, err);
-            return String::from("Failed to base64 decode logon manager trackder data");
+            return "Failed to base64 decode logon manager trackder data".into();
         }
     };
 
     let message_result = get_location_tracker_state(&decoded_data);
     match message_result {
-        Ok((_, result)) => result,
+        Ok((_, result)) => result.into(),
         Err(err) => {
             error!(
                 "[macos-unifiedlogs] Failed to get location tracker data {}, error: {:?}",
                 status, err
             );
-            String::from("Failed to get logon manager trackder data")
+            "Failed to get logon manager trackder data".into()
         }
     }
 }
 
 /// Get the location state data
-pub(crate) fn get_location_tracker_state(data: &[u8]) -> nom::IResult<&[u8], String> {
+pub fn get_location_tracker_state(data: &[u8]) -> nom::IResult<&[u8], String> {
     // Found at https://github.com/cmsj/ApplePrivateHeaders/blob/main/macOS/11.3/System/Library/Frameworks/CoreLocation.framework/Versions/A/CoreLocation/CoreLocation-Structs.h and in dyldcache
     let (location_data, distance_filter_data) = take(size_of::<u64>())(data)?;
     let (location_data, desired_accuracy_data) = take(size_of::<u64>())(location_data)?;
@@ -453,9 +452,10 @@ fn location_tracker_object(tracker: &LocationTrackerState) -> String {
 }
 
 /// Parse location tracker state data
-pub(crate) fn io_message(data: &str) -> String {
+pub fn io_message(data: &str) -> &str {
     // Found in dyldcache
-    let message = match data {
+
+    (match data {
         "3758097008" => "CanSystemSleep",
         "3758097024" => "SystemWillSleep",
         "3758097040" => "SystemWillNotSleep",
@@ -484,12 +484,11 @@ pub(crate) fn io_message(data: &str) -> String {
             warn!("[macos-unifiedlogs] Unknown IO Message: {}", data);
             data
         }
-    };
-    message.to_string()
+    }) as _
 }
 
 /// Parse and get the location Daemon tracker
-pub(crate) fn get_daemon_status_tracker(data: &[u8]) -> nom::IResult<&[u8], String> {
+pub fn get_daemon_status_tracker(data: &[u8]) -> nom::IResult<&[u8], String> {
     // https://gist.github.com/razvand/578f94748b624f4d47c1533f5a02b095
     let (location_data, level_data) = take(size_of::<u64>())(data)?;
     let (location_data, charged_data) = take(size_of::<u8>())(location_data)?;

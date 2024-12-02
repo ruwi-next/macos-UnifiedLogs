@@ -19,8 +19,8 @@ pub struct FirehoseLoss {
 impl FirehoseLoss {
     /// Parse loss Firehose log entry.
     //  Ex: tp 16 + 48: loss
-    pub fn parse_firehose_loss(data: &[u8]) -> nom::IResult<&[u8], FirehoseLoss> {
-        let mut firehose_loss = FirehoseLoss {
+    pub fn parse_firehose_loss(data: &[u8]) -> nom::IResult<&[u8], Self> {
+        let mut firehose_loss = Self {
             start_time: 0,
             end_time: 0,
             count: 0,

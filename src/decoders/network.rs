@@ -11,11 +11,11 @@ use nom::{
     bytes::complete::take,
     number::complete::{be_u128, be_u16, be_u32, be_u8},
 };
-use std::net::Ipv6Addr;
+use std::{borrow::Cow, net::Ipv6Addr};
 use std::{mem::size_of, net::Ipv4Addr};
 
 /// Parse an IPv6 address
-pub(crate) fn ipv_six(data: &str) -> String {
+pub fn ipv_six(data: &str) -> Cow<'static, str> {
     let decoded_data_result = decode_standard(data);
     let decoded_data = match decoded_data_result {
         Ok(result) => result,
@@ -24,22 +24,22 @@ pub(crate) fn ipv_six(data: &str) -> String {
                 "[macos-unifiedlogs] Failed to base64 decode ipv6 data {}, error: {:?}",
                 data, err
             );
-            return String::from("Failed to base64 decode ipv6 data");
+            return "Failed to base64 decode ipv6 data".into();
         }
     };
     let message_result = get_ip_six(&decoded_data);
 
     match message_result {
-        Ok((_, result)) => result,
+        Ok((_, result)) => result.into(),
         Err(err) => {
             error!("[macos-unifiedlogs] Failed to get ipv6: {:?}", err);
-            format!("Failed to get ipv6: {}", data)
+            format!("Failed to get ipv6: {data}").into()
         }
     }
 }
 
 /// Parse an IPv4 address
-pub(crate) fn ipv_four(data: &str) -> String {
+pub fn ipv_four(data: &str) -> Cow<'static, str> {
     let decoded_data_result = decode_standard(data);
     let decoded_data = match decoded_data_result {
         Ok(result) => result,
@@ -48,24 +48,24 @@ pub(crate) fn ipv_four(data: &str) -> String {
                 "[macos-unifiedlogs] Failed to base64 decode ipv4 data {}, error: {:?}",
                 data, err
             );
-            return String::from("Failed to base64 decode ipv4 data");
+            return "Failed to base64 decode ipv4 data".into();
         }
     };
     let message_result = get_ip_four(&decoded_data);
 
     match message_result {
-        Ok((_, result)) => result,
+        Ok((_, result)) => result.into(),
         Err(err) => {
             error!("[macos-unifiedlogs] Failed to get ipv4: {:?}", err);
-            format!("Failed to get ipv4: {}", data)
+            format!("Failed to get ipv4: {data}").into()
         }
     }
 }
 
 /// Parse a sockaddr structure
-pub(crate) fn sockaddr(data: &str) -> String {
+pub fn sockaddr(data: &str) -> Cow<'static, str> {
     if data.is_empty() {
-        return String::from("<NULL>");
+        return "<NULL>".into();
     }
     let decoded_data_result = decode_standard(data);
     let decoded_data = match decoded_data_result {
@@ -75,18 +75,18 @@ pub(crate) fn sockaddr(data: &str) -> String {
                 "[macos-unifiedlogs] Failed to bas64 decode sockaddr data {}, error: {:?}",
                 data, err
             );
-            return String::from("Failed to base64 decode sockaddr data");
+            return "Failed to base64 decode sockaddr data".into();
         }
     };
     let message_result = get_sockaddr_data(&decoded_data);
     match message_result {
-        Ok((_, result)) => result,
+        Ok((_, result)) => result.into(),
         Err(err) => {
             error!(
                 "[macos-unifiedlogs] Failed to get sockaddr structure: {:?}",
                 err
             );
-            format!("Failed to get sockaddr: {}", data)
+            format!("Failed to get sockaddr: {data}").into()
         }
     }
 }
@@ -111,7 +111,7 @@ fn get_sockaddr_data(data: &[u8]) -> nom::IResult<&[u8], String> {
             let ip_addr = Ipv4Addr::from(ip);
 
             if port != 0 {
-                message = format!("{}:{}", ip_addr, port);
+                message = format!("{ip_addr}:{port}");
             } else {
                 message = ip_addr.to_string();
             }
@@ -131,11 +131,10 @@ fn get_sockaddr_data(data: &[u8]) -> nom::IResult<&[u8], String> {
             let ip_addr = Ipv6Addr::from(ip);
             if port != 0 {
                 message = format!(
-                    "{}:{}, Flow ID: {}, Scope ID: {}",
-                    ip_addr, port, flow, scope
+                    "{ip_addr}:{port}, Flow ID: {flow}, Scope ID: {scope}"
                 );
             } else {
-                message = format!("{}, Flow ID: {}, Scope ID: {}", ip_addr, flow, scope);
+                message = format!("{ip_addr}, Flow ID: {flow}, Scope ID: {scope}");
             }
         }
         _ => {
@@ -143,14 +142,14 @@ fn get_sockaddr_data(data: &[u8]) -> nom::IResult<&[u8], String> {
                 "[macos-unifiedlogs] Unknown sockaddr family: {}. From: {:?}",
                 family, data
             );
-            message = format!("Unknown sockaddr family: {}", family);
+            message = format!("Unknown sockaddr family: {family}");
         }
     }
     Ok((sock_data, message))
 }
 
 /// Get the IPv4 data
-pub(crate) fn get_ip_four(data: &[u8]) -> nom::IResult<&[u8], String> {
+pub fn get_ip_four(data: &[u8]) -> nom::IResult<&[u8], String> {
     let (ip_data, ip_addr_data) = take(size_of::<u32>())(data)?;
     let (_, ip) = be_u32(ip_addr_data)?;
     let ip = Ipv4Addr::from(ip);
@@ -159,7 +158,7 @@ pub(crate) fn get_ip_four(data: &[u8]) -> nom::IResult<&[u8], String> {
 }
 
 /// Get the IPv6 data
-pub(crate) fn get_ip_six(data: &[u8]) -> nom::IResult<&[u8], String> {
+pub fn get_ip_six(data: &[u8]) -> nom::IResult<&[u8], String> {
     let (ip_data, ip_addr_data) = take(size_of::<u128>())(data)?;
     let (_, ip) = be_u128(ip_addr_data)?;
     let ip = Ipv6Addr::from(ip);

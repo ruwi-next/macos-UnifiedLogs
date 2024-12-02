@@ -18,6 +18,10 @@
     clippy::inefficient_to_string,
     clippy::verbose_file_reads,
     clippy::unnested_or_patterns,
+    clippy::nursery,
+    clippy::missing_panics_doc,
+    clippy::uninlined_format_args,
+    clippy::semicolon_if_nothing_returned,
     rust_2018_idioms,
     future_incompatible
 )]
@@ -31,6 +35,7 @@
     clippy::checked_conversions,
     clippy::unnecessary_cast
 )]
+#![allow(clippy::missing_const_for_fn)]
 mod catalog;
 mod chunks;
 mod chunkset;

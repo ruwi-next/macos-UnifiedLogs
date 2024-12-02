@@ -61,17 +61,16 @@ fn parse_log_archive(path: &str) {
     let mut archive_path = PathBuf::from(path);
 
     // Parse all UUID files which contain strings and other metadata
-    let string_results = collect_strings(&archive_path.display().to_string()).unwrap();
+    let string_results = collect_strings(&archive_path).unwrap();
 
     archive_path.push("dsc");
     // Parse UUID cache files which also contain strings and other metadata
-    let shared_strings_results =
-        collect_shared_strings(&archive_path.display().to_string()).unwrap();
+    let shared_strings_results = collect_shared_strings(&archive_path).unwrap();
     archive_path.pop();
 
     archive_path.push("timesync");
     // Parse all timesync files
-    let timesync_data = collect_timesync(&archive_path.display().to_string()).unwrap();
+    let timesync_data = collect_timesync(&archive_path).unwrap();
     archive_path.pop();
 
     // Keep UUID, UUID cache, timesync files in memory while we parse all tracev3 files
@@ -285,7 +284,7 @@ fn parse_trace_file(
     // Check if livedata exists. We only have it if 'log collect' was used
     if archive_path.exists() {
         println!("Parsing: logdata.LiveData.tracev3");
-        let mut log_data = parse_log(&archive_path.display().to_string()).unwrap();
+        let mut log_data = parse_log(&archive_path).unwrap();
         log_data.oversize.append(&mut oversize_strings.oversize);
         let (results, missing_logs) = build_log(
             &log_data,

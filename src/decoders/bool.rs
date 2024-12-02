@@ -6,28 +6,28 @@
 // See the License for the specific language governing permissions and limitations under the License.
 
 /// Return BOOL value to string
-pub(crate) fn uppercase_bool(bool_data: &str) -> String {
+pub fn uppercase_bool(bool_data: &str) -> &'static str {
     if bool_data == "0" {
-        return String::from("NO");
+        return "NO";
     }
-    String::from("YES")
+    "YES"
 }
 
 /// Return bool value to string
-pub(crate) fn lowercase_bool(bool_data: &str) -> String {
+pub fn lowercase_bool(bool_data: &str) -> &'static str {
     if bool_data == "0" {
-        return String::from("false");
+        return "false";
     }
-    String::from("true")
+    "true"
 }
 
 /// Return int value to bool
-pub(crate) fn lowercase_int_bool(bool_data: &u8) -> String {
+pub fn lowercase_int_bool(bool_data: &u8) -> &'static str {
     let false_bool = 0;
     if bool_data == &false_bool {
-        return String::from("false");
+        return "false";
     }
-    String::from("true")
+    "true"
 }
 
 #[cfg(test)]

@@ -45,7 +45,7 @@ pub struct UUIDDescriptor {
 
 impl SharedCacheStrings {
     /// Parse shared strings data (the file(s) in /private/var/db/uuidtext/dsc)
-    pub fn parse_dsc(data: &[u8]) -> nom::IResult<&[u8], SharedCacheStrings> {
+    pub fn parse_dsc(data: &[u8]) -> nom::IResult<&[u8], Self> {
         let (input, sig) = take(size_of::<u32>())(data)?;
         let (_, dsc_sig) = le_u32(sig)?;
 
@@ -68,7 +68,7 @@ impl SharedCacheStrings {
         let (_, dsc_number_ranges) = le_u32(number_ranges)?;
         let (_, dsc_number_uuids) = le_u32(number_uuids)?;
 
-        let mut shared_cache_strings = SharedCacheStrings {
+        let mut shared_cache_strings = Self {
             signature: dsc_sig,
             major_version: dsc_major,
             minor_version: dsc_minor,
@@ -81,7 +81,7 @@ impl SharedCacheStrings {
 
         let mut range_count = 0;
         while range_count < shared_cache_strings.number_ranges {
-            let (range_input, range_data) = SharedCacheStrings::get_ranges(input, &dsc_major)?;
+            let (range_input, range_data) = Self::get_ranges(input, &dsc_major)?;
             input = range_input;
             shared_cache_strings.ranges.push(range_data);
             range_count += 1;
@@ -89,21 +89,21 @@ impl SharedCacheStrings {
 
         let mut uuid_count = 0;
         while uuid_count < shared_cache_strings.number_uuids {
-            let (uuid_input, uuid_data) = SharedCacheStrings::get_uuids(input, &dsc_major)?;
+            let (uuid_input, uuid_data) = Self::get_uuids(input, &dsc_major)?;
             input = uuid_input;
             shared_cache_strings.uuids.push(uuid_data);
             uuid_count += 1;
         }
 
         for uuids in &mut shared_cache_strings.uuids {
-            let (_, path_string) = SharedCacheStrings::get_paths(data, uuids.path_offset)?;
-            uuids.path_string = path_string;
+            let (_, path_string) = Self::get_paths(data, uuids.path_offset)?;
+            path_string.clone_into(&mut uuids.path_string);
         }
 
         for range in &mut shared_cache_strings.ranges {
             let (_, strings) =
-                SharedCacheStrings::get_strings(data, range.data_offset, range.range_size)?;
-            range.strings = strings;
+                Self::get_strings(data, range.data_offset, range.range_size)?;
+            range.strings = strings.to_vec();
         }
 
         Ok((input, shared_cache_strings))
@@ -193,13 +193,13 @@ impl SharedCacheStrings {
         let (_, dsc_path_offset) = le_u32(path_offset)?;
 
         uuid_data.text_size = dsc_text_size;
-        uuid_data.uuid = format!("{:X}", dsc_uuid);
+        uuid_data.uuid = format!("{dsc_uuid:X}");
         uuid_data.path_offset = dsc_path_offset;
 
         Ok((input, uuid_data))
     }
 
-    fn get_paths(data: &[u8], path_offset: u32) -> nom::IResult<&[u8], String> {
+    fn get_paths(data: &[u8], path_offset: u32) -> nom::IResult<&[u8], &str> {
         let (nom_path_offset, _) = take(path_offset)(data)?;
         let (_, path) = extract_string(nom_path_offset)?;
         Ok((nom_path_offset, path))
@@ -210,10 +210,10 @@ impl SharedCacheStrings {
         data: &[u8],
         string_offset: u32,
         string_range: u32,
-    ) -> nom::IResult<&[u8], Vec<u8>> {
+    ) -> nom::IResult<&[u8], &[u8]> {
         let (nom_string_offset, _) = take(string_offset)(data)?;
         let (_, strings) = take(string_range)(nom_string_offset)?;
-        Ok((&[], strings.to_vec()))
+        Ok((&[], strings))
     }
 }
 

@@ -7,9 +7,9 @@
 
 mod bool;
 mod darwin;
-pub(crate) mod decoder;
+pub mod decoder;
 mod dns;
-pub(crate) mod location;
+pub mod location;
 mod network;
 mod opendirectory;
 mod time;

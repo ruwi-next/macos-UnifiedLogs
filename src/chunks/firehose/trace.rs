@@ -24,8 +24,8 @@ pub struct FirehoseTrace {
 impl FirehoseTrace {
     /// Parse Trace Firehose log entry.
     //  Ex: tp 504 + 34: trace default (main_exe)
-    pub fn parse_firehose_trace(data: &[u8]) -> nom::IResult<&[u8], FirehoseTrace> {
-        let mut firehose_trace = FirehoseTrace {
+    pub fn parse_firehose_trace(data: &[u8]) -> nom::IResult<&[u8], Self> {
+        let mut firehose_trace = Self {
             unknown_pc_id: 0,
             message_data: FirehoseItemData {
                 item_info: Vec::new(),
@@ -50,7 +50,7 @@ impl FirehoseTrace {
         // But the data is stored differently from other log entries
         // The data appears to be stored backwards? Ex: Data value, Data size, number of data entries, instead normal: number of data entries, data size, data value
         message_data.reverse();
-        let message = FirehoseTrace::get_message(&message_data);
+        let message = Self::get_message(&message_data);
         firehose_trace.message_data = message;
         firehose_trace.unknown_pc_id = firehose_unknown_pc_id;
 
@@ -59,7 +59,7 @@ impl FirehoseTrace {
 
     /// Get the Trace message
     fn get_message(data: &[u8]) -> FirehoseItemData {
-        let message_result = FirehoseTrace::parse_trace_message(data);
+        let message_result = Self::parse_trace_message(data);
         match message_result {
             Ok((_, result)) => result,
             Err(err) => {
@@ -108,28 +108,28 @@ impl FirehoseTrace {
             match entry_size {
                 1 => {
                     let (_, value) = be_u8(message_data)?;
-                    item_info.message_strings = format!("{value}")
+                    item_info.message_strings = format!("{value}");
                 }
                 2 => {
                     let (_, value) = be_u16(message_data)?;
-                    item_info.message_strings = format!("{value}")
+                    item_info.message_strings = format!("{value}");
                 }
                 4 => {
                     let (_, value) = be_u32(message_data)?;
-                    item_info.message_strings = format!("{value}")
+                    item_info.message_strings = format!("{value}");
                 }
                 8 => {
                     let (_, value) = be_u64(message_data)?;
-                    item_info.message_strings = format!("{value}")
+                    item_info.message_strings = format!("{value}");
                 }
                 _ => {
                     warn!("[macos-unifiedlogs] Unhandled size of trace data: {entry_size}. Defaulting to size of one");
                     let (_, unknown_size) = le_u8(message_data)?;
-                    item_info.message_strings = format!("{unknown_size}")
+                    item_info.message_strings = format!("{unknown_size}");
                 }
             }
             remaining_input = input;
-            item_data.item_info.push(item_info)
+            item_data.item_info.push(item_info);
         }
         // Reverse the data back to expected format
         item_data.item_info.reverse();
@@ -141,10 +141,10 @@ impl FirehoseTrace {
     pub fn get_firehose_trace_strings<'a>(
         strings_data: &'a [UUIDText],
         string_offset: u64,
-        first_proc_id: &u64,
-        second_proc_id: &u32,
-        catalogs: &CatalogChunk,
-    ) -> nom::IResult<&'a [u8], MessageData> {
+        first_proc_id: u64,
+        second_proc_id: u32,
+        catalogs: &'a CatalogChunk,
+    ) -> nom::IResult<&'a [u8], MessageData<'a>> {
         // Only main_exe flag has been seen for format strings
         MessageData::extract_format_strings(
             strings_data,
@@ -163,7 +163,7 @@ mod tests {
 
     use crate::{
         chunks::firehose::trace::FirehoseTrace,
-        parser::{collect_strings, parse_log},
+        parser::{buffer_from_path, collect_strings, parse_log},
     };
 
     #[test]
@@ -209,10 +209,11 @@ mod tests {
     fn test_get_firehose_trace_strings() {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_high_sierra.logarchive");
-        let string_results = collect_strings(&test_path.display().to_string()).unwrap();
+        let string_results = collect_strings(&test_path).unwrap();
 
         test_path.push("logdata.LiveData.tracev3");
-        let log_data = parse_log(&test_path.display().to_string()).unwrap();
+        let data = buffer_from_path(&test_path).unwrap();
+        let log_data = parse_log(&data).unwrap();
 
         let activity_type = 0x3;
 
@@ -223,8 +224,8 @@ mod tests {
                         let (_, message_data) = FirehoseTrace::get_firehose_trace_strings(
                             &string_results,
                             firehose.format_string_location as u64,
-                            &preamble.first_number_proc_id,
-                            &preamble.second_number_proc_id,
+                            preamble.first_number_proc_id,
+                            preamble.second_number_proc_id,
                             &catalog_data.catalog,
                         )
                         .unwrap();

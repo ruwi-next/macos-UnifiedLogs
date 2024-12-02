@@ -5,10 +5,12 @@
 // is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use std::borrow::Cow;
+
 use log::warn;
 
 /// Convert Darwin errno codes to message
-pub(crate) fn errno_codes(errno: &str) -> String {
+pub fn errno_codes(errno: &str) -> Cow<'static, str> {
     // Found at https://github.com/apple/darwin-xnu/blob/main/bsd/sys/errno.h
     let errno_message = match errno {
         "0" => "Success",
@@ -126,27 +128,28 @@ pub(crate) fn errno_codes(errno: &str) -> String {
         "-8" => "Data less",
         _ => {
             warn!("[macos-unifiedlogs] Unknown darwin errno code: {}", errno);
-            return format!("Unknown errno: {}", errno);
+            return format!("Unknown errno: {errno}").into();
         }
     };
 
-    errno_message.to_string()
+    errno_message.into()
 }
 
 /// Parse UNIX permissions to string version
-pub(crate) fn permission(permissions: &str) -> String {
-    let mut message = String::from("-");
+pub fn permission(permissions: &str) -> Cow<'static, str> {
+    let mut message = "-".into();
     for bit in permissions.chars() {
-        match bit {
-            '1' => message = format!("{}--x", message),
-            '2' => message = format!("{}-w-", message),
-            '4' => message = format!("{}r--", message),
-            '3' => message = format!("{}-wx", message),
-            '5' => message = format!("{}r-x", message),
-            '6' => message = format!("{}rw-", message),
-            '7' => message = format!("{}rwx", message),
-            _ => message = format!("{}---", message),
+        message = match bit {
+            '1' => format!("{message}--x"),
+            '2' => format!("{message}-w-"),
+            '4' => format!("{message}r--"),
+            '3' => format!("{message}-wx"),
+            '5' => format!("{message}r-x"),
+            '6' => format!("{message}rw-"),
+            '7' => format!("{message}rwx"),
+            _ => format!("{message}---"),
         }
+        .into();
     }
     message
 }

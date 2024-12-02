@@ -11,31 +11,32 @@ use log::{error, info};
 use nom::bytes::complete::take;
 use nom::number::complete::{le_u32, le_u64, le_u8};
 use plist::Value;
+use std::borrow::Cow;
 use std::mem::size_of;
 
 #[derive(Debug, Clone)]
-pub struct Statedump {
+pub struct Statedump<'a> {
     pub chunk_tag: u32,
     pub chunk_subtag: u32,
     pub chunk_data_size: u64,
     pub first_proc_id: u64,
     pub second_proc_id: u32,
     pub ttl: u8,
-    pub unknown_reserved: Vec<u8>, // 3 bytes
+    pub unknown_reserved: &'a [u8], // 3 bytes
     pub continuous_time: u64,
     pub activity_id: u64,
     pub uuid: String,
     pub unknown_data_type: u32, // 1 = plist, 3 = custom object?, 2 = (protocol buffer?)
     pub unknown_data_size: u32, // Size of statedump data
-    pub decoder_library: String,
-    pub decoder_type: String,
-    pub title_name: String,
-    pub statedump_data: Vec<u8>,
+    pub decoder_library: &'a str,
+    pub decoder_type: &'a str,
+    pub title_name: &'a str,
+    pub statedump_data: &'a [u8],
 }
 
-impl Statedump {
+impl<'a> Statedump<'a> {
     /// Parse Statedump log entry. Statedumps are special log entries that may contain a plist file, custom object, or protocol buffer
-    pub fn parse_statedump(data: &[u8]) -> nom::IResult<&[u8], Statedump> {
+    pub fn parse_statedump(data: &'a [u8]) -> nom::IResult<&'a [u8], Self> {
         let mut statedump_results = Statedump {
             chunk_tag: 0,
             chunk_subtag: 0,
@@ -43,16 +44,16 @@ impl Statedump {
             first_proc_id: 0,
             second_proc_id: 0,
             ttl: 0,
-            unknown_reserved: Vec::new(),
+            unknown_reserved: &[],
             continuous_time: 0,
             activity_id: 0,
             uuid: String::new(),
             unknown_data_type: 0,
             unknown_data_size: 0,
-            decoder_library: String::new(),
-            decoder_type: String::new(),
-            title_name: String::new(),
-            statedump_data: Vec::new(),
+            decoder_library: "",
+            decoder_type: "",
+            title_name: "",
+            statedump_data: &[],
         };
         let (input, chunk_tag) = take(size_of::<u32>())(data)?;
         let (input, chunk_sub_tag) = take(size_of::<u32>())(input)?;
@@ -114,39 +115,39 @@ impl Statedump {
         statedump_results.first_proc_id = statedump_first_proc_id;
         statedump_results.second_proc_id = statedump_second_proc_id;
         statedump_results.ttl = statedump_ttl;
-        statedump_results.unknown_reserved = unknown_reserved.to_vec();
+        statedump_results.unknown_reserved = unknown_reserved;
         statedump_results.continuous_time = statedump_continous_time;
         statedump_results.activity_id = statedump_activity_id;
         statedump_results.unknown_data_type = statedump_unknown_data_type;
         statedump_results.unknown_data_size = statedump_unknown_data_size;
 
-        let uuid_string = format!("{:02X?}", uuid);
+        let uuid_string = format!("{uuid:02X?}");
         statedump_results.uuid = clean_uuid(&uuid_string);
 
         let (input, statedump_data) = take(statedump_unknown_data_size)(input)?;
-        statedump_results.statedump_data = statedump_data.to_vec();
+        statedump_results.statedump_data = statedump_data;
 
         Ok((input, statedump_results))
     }
 
     /// Parse the binary plist file in the log. The plist may be empty
-    pub fn parse_statedump_plist(plist_data: &[u8]) -> String {
+    pub fn parse_statedump_plist(plist_data: &[u8]) -> Cow<'static, str> {
         if plist_data.is_empty() {
             info!("[macos-unifiedlogs] Empty plist data in statedump");
-            return String::from("Empty plist data");
+            return "Empty plist data".into();
         }
         let data: Result<Value, plist::Error> = plist::from_bytes(plist_data);
         match data {
             Ok(results) => {
                 let json_data = serde_json::to_string(&results);
                 match json_data {
-                    Ok(json) => json,
+                    Ok(json) => json.into(),
                     Err(err) => {
                         error!(
                             "[macos-unifiedlogs] Failed to convert plist to json: {:?}",
                             err
                         );
-                        String::from("Failed to convert plist data to json")
+                        "Failed to convert plist data to json".into()
                     }
                 }
             }
@@ -155,7 +156,7 @@ impl Statedump {
                     "[macos-unifiedlogs] Failed to parse statedump plist data: {:?}",
                     err
                 );
-                String::from("Failed to get plist data")
+                "Failed to get plist data".into()
             }
         }
     }
@@ -180,7 +181,7 @@ impl Statedump {
                     "[macos-unifiedlogs] Failed to parse statedump object {}: {:?}",
                     name, err
                 );
-                format!("Failed to parse statedump object: {}", name)
+                format!("Failed to parse statedump object: {name}")
             }
         }
     }

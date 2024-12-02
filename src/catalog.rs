@@ -90,15 +90,15 @@ pub struct CatalogSubchunk {
 }
 
 #[derive(Debug)]
-pub struct SubsystemInfo {
-    pub subsystem: String,
-    pub category: String,
+pub struct SubsystemInfo<'a> {
+    pub subsystem: &'a str,
+    pub category: &'a str,
 }
 
 impl CatalogChunk {
     /// Parse log Catalog data. The log Catalog contains metadata related to log entries such as Process info, Subsystem info, and the compressed log entries
-    pub fn parse_catalog(data: &[u8]) -> nom::IResult<&[u8], CatalogChunk> {
-        let mut catalog_chunk = CatalogChunk {
+    pub fn parse_catalog(data: &[u8]) -> nom::IResult<&[u8], Self> {
+        let mut catalog_chunk = Self {
             chunk_tag: 0,
             chunk_sub_tag: 0,
             chunk_data_size: 0,
@@ -152,9 +152,9 @@ impl CatalogChunk {
 
             catalog_chunk
                 .catalog_uuids
-                .push(format!("{:032X}", uuid_be));
+                .push(format!("{uuid_be:032X}"));
             uuid_count += 1;
-            input = input_data
+            input = input_data;
         }
 
         catalog_chunk.chunk_tag = catalog_chunk_tag;
@@ -179,7 +179,7 @@ impl CatalogChunk {
         while proc_entry_count < catalog_chunk.number_process_information_entries {
             // Parse and get Process Entry data
             let (proc_input, mut process_entries) =
-                CatalogChunk::parse_catalog_process_entry(input, &catalog_chunk.catalog_uuids)?;
+                Self::parse_catalog_process_entry(input, &catalog_chunk.catalog_uuids)?;
 
             // Grab parsed UUIDs from Catalag array based on process entry uuid index
             for (key, uuid) in catalog_chunk.catalog_uuids.iter().enumerate() {
@@ -202,7 +202,7 @@ impl CatalogChunk {
 
         while subchunk_count < catalog_chunk.number_sub_chunks {
             // Get Catalog subchunk metadata
-            let (subchunk_input, subchunks) = CatalogChunk::parse_catalog_subchunk(input)?;
+            let (subchunk_input, subchunks) = Self::parse_catalog_subchunk(input)?;
 
             input = subchunk_input;
             subchunk_count += 1;
@@ -278,7 +278,7 @@ impl CatalogChunk {
         let mut uuid_entries = 0;
         while uuid_entries < catalog_process_entry.number_uuids_entries {
             // Parse UUID metadata in Catalog Process Entry (the Catalog Process Entry references the UUIDs array parsed in parse_catalog by index)
-            let process_uuid_metadata_result = CatalogChunk::parse_process_info_uuid_entry(input);
+            let process_uuid_metadata_result = Self::parse_process_info_uuid_entry(input);
             match process_uuid_metadata_result {
                 Ok((process_input, mut uuid_data)) => {
                     if uuids.len() < uuid_data.catalog_uuid_index as usize {
@@ -308,7 +308,7 @@ impl CatalogChunk {
         // Continuously get subsystem entries based on number_subsystems
         let mut subsystem_entries = 0;
         while subsystem_entries < catalog_process_entry.number_subsystems {
-            let (process_input, subsystem) = CatalogChunk::parse_process_info_subystem(input)?;
+            let (process_input, subsystem) = Self::parse_process_info_subystem(input)?;
             input = process_input;
             subsystem_entries += 1;
             catalog_process_entry.subsystem_entries.push(subsystem);
@@ -474,19 +474,19 @@ impl CatalogChunk {
     // Get subsystem and category based on the log entry first_proc_id, second_proc_id, log entry subsystem id and the associated Catalog
     pub fn get_subsystem<'a>(
         subsystem_value: &u16,
-        first_proc_id: &u64,
-        second_proc_id: &u32,
-        catalog: &'a CatalogChunk,
-    ) -> nom::IResult<&'a [u8], SubsystemInfo> {
+        first_proc_id: u64,
+        second_proc_id: u32,
+        catalog: &'a Self,
+    ) -> nom::IResult<&'a [u8], SubsystemInfo<'a>> {
         let mut subsystem_info = SubsystemInfo {
-            subsystem: String::new(),
-            category: String::new(),
+            subsystem: "",
+            category: "",
         };
 
         // Go through catalog entries until first and second proc id match the log entry
         for process_info in &catalog.catalog_process_info_entries {
-            if first_proc_id == &process_info.first_number_proc_id
-                && second_proc_id == &process_info.second_number_proc_id
+            if first_proc_id == process_info.first_number_proc_id
+                && second_proc_id == process_info.second_number_proc_id
             {
                 // Go through subsystems in catalog entry until subsystem value is found
                 for subsystems in &process_info.subsystem_entries {
@@ -506,12 +506,12 @@ impl CatalogChunk {
         }
 
         warn!("[macos-unifiedlogs] Did not find subsystem in log entry");
-        subsystem_info.subsystem = String::from("Unknown subsystem");
+        subsystem_info.subsystem = "Unknown subsystem";
         Ok((&[], subsystem_info))
     }
 
     // Get the actual Process ID associated with log entry
-    pub fn get_pid(first_proc_id: &u64, second_proc_id: &u32, catalog: &CatalogChunk) -> u64 {
+    pub fn get_pid(first_proc_id: &u64, second_proc_id: &u32, catalog: &Self) -> u64 {
         // Go through catalog entries until first and second proc id match the log entry
         for process_info in &catalog.catalog_process_info_entries {
             if first_proc_id == &process_info.first_number_proc_id
@@ -526,7 +526,7 @@ impl CatalogChunk {
     }
 
     // Get the effictive user id associated with log entry. Can be mapped to an account name
-    pub fn get_euid(first_proc_id: &u64, second_proc_id: &u32, catalog: &CatalogChunk) -> u32 {
+    pub fn get_euid(first_proc_id: &u64, second_proc_id: &u32, catalog: &Self) -> u32 {
         // Go through catalog entries until first and second proc id match the log entry
         for process_info in &catalog.catalog_process_info_entries {
             if first_proc_id == &process_info.first_number_proc_id
@@ -765,13 +765,9 @@ mod tests {
 
         let (_, catalog) = CatalogChunk::parse_catalog(&buffer).unwrap();
 
-        let (_, results) = CatalogChunk::get_subsystem(
-            &subsystem_value,
-            &first_proc_id,
-            &second_proc_id,
-            &catalog,
-        )
-        .unwrap();
+        let (_, results) =
+            CatalogChunk::get_subsystem(&subsystem_value, first_proc_id, second_proc_id, &catalog)
+                .unwrap();
         assert_eq!(results.subsystem, "com.apple.containermanager");
         assert_eq!(results.category, "xpc");
     }

@@ -42,7 +42,6 @@ fn parse_trace_file(path: &str) {
     let string_results: Vec<UUIDText> = Vec::new();
     let shared_strings_results: Vec<SharedCacheStrings> = Vec::new();
     let timesync_data: Vec<TimesyncBoot> = Vec::new();
-    let exclude_missing = false;
 
     // We only get minimal data since we dont have the log metadata
     let (results, _) = build_log(
@@ -50,7 +49,6 @@ fn parse_trace_file(path: &str) {
         &string_results,
         &shared_strings_results,
         &timesync_data,
-        exclude_missing,
     );
     output(&results, filename.file_name().unwrap().to_str().unwrap()).unwrap();
     println!(

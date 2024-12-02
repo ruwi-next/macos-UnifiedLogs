@@ -59,17 +59,16 @@ fn parse_log_archive(path: &str) {
     let mut archive_path = PathBuf::from(path);
 
     // Parse all UUID files which contain strings and other metadata
-    let string_results = collect_strings(&archive_path.display().to_string()).unwrap();
+    let string_results = collect_strings(&archive_path).unwrap();
 
     archive_path.push("dsc");
     // Parse UUID cache files which also contain strings and other metadata
-    let shared_strings_results =
-        collect_shared_strings(&archive_path.display().to_string()).unwrap();
+    let shared_strings_results = collect_shared_strings(&archive_path).unwrap();
     archive_path.pop();
 
     archive_path.push("timesync");
     // Parse all timesync files
-    let timesync_data = collect_timesync(&archive_path.display().to_string()).unwrap();
+    let timesync_data = collect_timesync(&archive_path).unwrap();
     archive_path.pop();
 
     // Keep UUID, UUID cache, timesync files in memory while we parse all tracev3 files
@@ -119,7 +118,6 @@ fn parse_trace_file(
 
     // Exclude missing data from returned output. Keep separate until we parse all oversize entries.
     // Then at end, go through all missing data and check all parsed oversize entries again
-    let mut exclude_missing = true;
     let mut missing_data: Vec<UnifiedLogData> = Vec::new();
 
     let mut archive_path = PathBuf::from(path);
@@ -148,7 +146,6 @@ fn parse_trace_file(
                 string_results,
                 shared_strings_results,
                 timesync_data,
-                exclude_missing,
             );
             // Take all Oversize entries and add to tracker
             oversize_strings
@@ -193,7 +190,6 @@ fn parse_trace_file(
                 string_results,
                 shared_strings_results,
                 timesync_data,
-                exclude_missing,
             );
             // Take all Oversize entries and add to tracker
             oversize_strings.oversize = log_data.oversize;
@@ -237,7 +233,6 @@ fn parse_trace_file(
                 string_results,
                 shared_strings_results,
                 timesync_data,
-                exclude_missing,
             );
 
             // Signposts have not been seen with Oversize entries, but we track them in case a log entry refers to them
@@ -279,7 +274,6 @@ fn parse_trace_file(
                 string_results,
                 shared_strings_results,
                 timesync_data,
-                exclude_missing,
             );
 
             // Track Oversize entries
@@ -302,14 +296,13 @@ fn parse_trace_file(
     // Check if livedata exists. We only have it if 'log collect' was used
     if archive_path.exists() {
         println!("Parsing: logdata.LiveData.tracev3");
-        let mut log_data = parse_log(&archive_path.display().to_string()).unwrap();
+        let mut log_data = parse_log(&archive_path).unwrap();
         log_data.oversize.append(&mut oversize_strings.oversize);
         let (results, missing_logs) = build_log(
             &log_data,
             string_results,
             shared_strings_results,
             timesync_data,
-            exclude_missing,
         );
         missing_data.push(missing_logs);
         log_count += results.len();
@@ -320,7 +313,6 @@ fn parse_trace_file(
     }
 
     // Include all log entries now, if any logs are missing data its because the data has rolled
-    exclude_missing = false;
     for mut leftover_data in missing_data {
         // Add all of our previous oversize data to logs for lookups
         leftover_data
@@ -335,7 +327,6 @@ fn parse_trace_file(
             string_results,
             shared_strings_results,
             timesync_data,
-            exclude_missing,
         );
         log_count += results.len();
 

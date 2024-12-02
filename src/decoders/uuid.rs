@@ -5,11 +5,13 @@
 // is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
+use std::borrow::Cow;
+
 use crate::util::{clean_uuid, decode_standard};
 use log::error;
 
 /// Get UUID string from log object
-pub(crate) fn parse_uuid(uuid_data: &str) -> String {
+pub fn parse_uuid(uuid_data: &str) -> Cow<'_, str> {
     let decoded_data_result = decode_standard(uuid_data);
     let decoded_data = match decoded_data_result {
         Ok(result) => result,
@@ -18,12 +20,12 @@ pub(crate) fn parse_uuid(uuid_data: &str) -> String {
                 "[macos-unifiedlogs] Failed to base64 decode uuid data {}, error: {:?}",
                 uuid_data, err
             );
-            return String::from("Failed to base64 decode UUID details");
+            return "Failed to base64 decode UUID details".into();
         }
     };
-    let mut uuid_string = format!("{:02X?}", decoded_data);
+    let mut uuid_string = format!("{decoded_data:02X?}");
     uuid_string = clean_uuid(&uuid_string);
-    uuid_string
+    uuid_string.into()
 }
 
 #[cfg(test)]

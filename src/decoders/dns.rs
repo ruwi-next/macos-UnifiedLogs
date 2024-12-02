@@ -15,12 +15,13 @@ use nom::{
     number::complete::{be_u128, be_u16, be_u32, be_u8, le_u32},
 };
 use std::{
+    borrow::Cow,
     mem::size_of,
     net::{Ipv4Addr, Ipv6Addr},
 };
 
 /// Parse the DNS header
-pub(crate) fn parse_dns_header(data: &str) -> String {
+pub fn parse_dns_header(data: &str) -> Cow<'_, str> {
     let decoded_data_result = decode_standard(data);
     let decoded_data = match decoded_data_result {
         Ok(result) => result,
@@ -29,19 +30,19 @@ pub(crate) fn parse_dns_header(data: &str) -> String {
                 "[macos-unifiedlogs] Failed to base64 decode dns header data {}, error: {:?}",
                 data, err
             );
-            return String::from("Failed to base64 decode DNS header details");
+            return "Failed to base64 decode DNS header details".into();
         }
     };
 
     let message_result = get_dns_header(&decoded_data);
     match message_result {
-        Ok((_, result)) => result,
+        Ok((_, result)) => result.into(),
         Err(err) => {
             error!(
                 "[macos-unifiedlogs] Failed to get dns header structure: {:?}",
                 err
             );
-            format!("Failed to get dns header: {}", data)
+            format!("Failed to get dns header: {data}").into()
         }
     }
 }
@@ -80,8 +81,7 @@ fn get_dns_header(data: &[u8]) -> nom::IResult<&[u8], String> {
     let (_, flags) = be_u16(flag_data)?;
 
     let header_message = format!(
-        "Query ID: {:#X?}, Flags: {:#X?} {}, {}",
-        id, flags, message, count_message
+        "Query ID: {id:#X?}, Flags: {flags:#X?} {message}, {count_message}"
     );
 
     Ok((dns_data, header_message))
@@ -136,27 +136,20 @@ fn get_dns_flags(data: &[u8]) -> nom::IResult<(&[u8], usize), String> {
     };
 
     let message = format!(
-        "Opcode: {}, 
-    Query Type: {},
-    Authoritative Answer Flag: {}, 
-    Truncation Flag: {}, 
-    Recursion Desired: {}, 
-    Recursion Available: {}, 
-    Response Code: {}",
-        opcode_message,
-        query_flag,
-        authoritative_flag,
-        truncation_flag,
-        recursion_desired,
-        recursion_available,
-        response_message
+        "Opcode: {opcode_message}, 
+    Query Type: {query_flag},
+    Authoritative Answer Flag: {authoritative_flag}, 
+    Truncation Flag: {truncation_flag}, 
+    Recursion Desired: {recursion_desired}, 
+    Recursion Available: {recursion_available}, 
+    Response Code: {response_message}"
     );
 
     Ok(((flag_data, 0), message))
 }
 
 /// Base64 decode the domain name. This is normally masked, but may be shown if private data is enabled
-pub(crate) fn get_domain_name(data: &str) -> String {
+pub fn get_domain_name(data: &str) -> Cow<'static, str> {
     let decoded_data_result = decode_standard(data);
     let decoded_data = match decoded_data_result {
         Ok(result) => result,
@@ -165,7 +158,7 @@ pub(crate) fn get_domain_name(data: &str) -> String {
                 "[macos-unifiedlogs] Failed to base64 decode dns name data {}, error: {:?}",
                 data, err
             );
-            return String::from("Failed to base64 decode DNS name details");
+            return "Failed to base64 decode DNS name details".into();
         }
     };
 
@@ -176,27 +169,27 @@ pub(crate) fn get_domain_name(data: &str) -> String {
             let non_domain_chars: Vec<char> = vec!['\n', '\t', '\r'];
             for unicode in results.chars() {
                 // skip non-domain characters and replace with '.'
-                if non_domain_chars.contains(&unicode) || format!("{:?}", unicode).contains("\\u{")
+                if non_domain_chars.contains(&unicode) || format!("{unicode:?}").contains("\\u{")
                 {
                     clean_domain.push('.');
                     continue;
                 }
                 clean_domain.push_str(&String::from(unicode));
             }
-            clean_domain
+            clean_domain.into()
         }
         Err(err) => {
             error!(
                 "[macos-unifiedlogs] Failed to extract domain name from logs: {:?}",
                 err
             );
-            String::from("Failed to extract domain name from logs")
+            "Failed to extract domain name from logs".into()
         }
     }
 }
 
 /// Parse DNS Service Binding record type
-pub(crate) fn get_service_binding(data: &str) -> String {
+pub fn get_service_binding(data: &str) -> Cow<'_, str> {
     let decoded_data_result = decode_standard(data);
     let decoded_data = match decoded_data_result {
         Ok(result) => result,
@@ -205,19 +198,19 @@ pub(crate) fn get_service_binding(data: &str) -> String {
                 "[macos-unifiedlogs] Failed to base64 decode dns svcb data {}, error: {:?}",
                 data, err
             );
-            return String::from("Failed to base64 decode DNS svcb details");
+            return "Failed to base64 decode DNS svcb details".into();
         }
     };
 
     let message_results = parse_svcb(&decoded_data);
     match message_results {
-        Ok((_, results)) => results,
+        Ok((_, results)) => results.into(),
         Err(err) => {
             error!(
                 "[macos-unifiedlogs] Failed to parse DNS Service Binding data: {:?}",
                 err
             );
-            String::from("Failed to parse DNS Service Binding data")
+            "Failed to parse DNS Service Binding data".into()
         }
     }
 }
@@ -247,7 +240,7 @@ fn parse_svcb(data: &[u8]) -> nom::IResult<&[u8], String> {
 
     let (dns_data, ip_message) = parse_svcb_ip(dns_data)?;
 
-    let message = format!("rdata: {} . {} {}", id, alpn_message, ip_message);
+    let message = format!("rdata: {id} . {alpn_message} {ip_message}");
     Ok((dns_data, message))
 }
 
@@ -261,7 +254,7 @@ fn parse_svcb_alpn(dns_data: &[u8]) -> nom::IResult<&[u8], String> {
         let (alpn_data, alpn_entry) = take(entry)(alpn_data)?;
         data = alpn_data;
         let (_, alpn_name) = extract_string(alpn_entry)?;
-        message = format!("{}{},", message, alpn_name);
+        message = format!("{message}{alpn_name},");
     }
     Ok((data, message))
 }
@@ -292,23 +285,23 @@ fn parse_svcb_ip(data: &[u8]) -> nom::IResult<&[u8], String> {
 
                 let (_, ip) = be_u32(ipv4_data)?;
                 let ip_addr = Ipv4Addr::from(ip);
-                ipv4_hint = format!("{}{},", ipv4_hint, ip_addr);
+                ipv4_hint = format!("{ipv4_hint}{ip_addr},");
             } else if ip_version == ipv6 {
                 let (remaining_ip_data, ipv6_data) = take(size_of::<u128>())(ip_data)?;
                 ip_data = remaining_ip_data;
 
                 let (_, ip) = be_u128(ipv6_data)?;
                 let ip_addr = Ipv6Addr::from(ip);
-                ipv6_hint = format!("{}{},", ipv6_hint, ip_addr);
+                ipv6_hint = format!("{ipv6_hint}{ip_addr},");
             }
         }
     }
-    let message = format!("{} {}", ipv4_hint, ipv6_hint);
+    let message = format!("{ipv4_hint} {ipv6_hint}");
     Ok((dns_data, message))
 }
 
 /// Get the MAC Address from the log data
-pub(crate) fn get_dns_mac_addr(data: &str) -> String {
+pub fn get_dns_mac_addr(data: &str) -> Cow<'static, str> {
     let decoded_data_result = decode_standard(data);
     let decoded_data = match decoded_data_result {
         Ok(result) => result,
@@ -317,19 +310,19 @@ pub(crate) fn get_dns_mac_addr(data: &str) -> String {
                 "[macos-unifiedlogs] Failed to base64 decode dns mac address data {}, error: {:?}",
                 data, err
             );
-            return String::from("Failed to base64 decode DNS mac address details");
+            return "Failed to base64 decode DNS mac address details".into();
         }
     };
 
     let message_results = parse_mac_addr(&decoded_data);
     match message_results {
-        Ok((_, results)) => results,
+        Ok((_, results)) => results.into(),
         Err(err) => {
             error!(
                 "[macos-unifiedlogs] Failed to parse DNS mac address data: {:?}",
                 err
             );
-            String::from("Failed to parse DNS mac address data")
+            "Failed to parse DNS mac address data".into()
         }
     }
 }
@@ -344,13 +337,13 @@ fn parse_mac_addr(dns_data: &[u8]) -> nom::IResult<&[u8], String> {
         data = remaining_data;
 
         let (_, mac_addr) = be_u8(addr)?;
-        mac_data.push(format!("{:02X?}", mac_addr));
+        mac_data.push(format!("{mac_addr:02X?}"));
     }
     Ok((data, mac_data.join(":")))
 }
 
 /// Get IP Address info from log data
-pub(crate) fn dns_ip_addr(data: &str) -> String {
+pub fn dns_ip_addr(data: &str) -> Cow<'static, str> {
     let decoded_data_result = decode_standard(data);
     let decoded_data = match decoded_data_result {
         Ok(result) => result,
@@ -359,18 +352,18 @@ pub(crate) fn dns_ip_addr(data: &str) -> String {
                 "[macos-unifiedlogs] Failed to base64 decode dns ip address data {}, error: {:?}",
                 data, err
             );
-            return String::from("Failed to base64 decode DNS ip address details");
+            return "Failed to base64 decode DNS ip address details".into();
         }
     };
     let message_results = parse_dns_ip_addr(&decoded_data);
     match message_results {
-        Ok((_, results)) => results,
+        Ok((_, results)) => results.into(),
         Err(err) => {
             error!(
                 "[macos-unifiedlogs] Failed to parse DNS ip address data: {:?}",
                 err
             );
-            String::from("Failed to parse DNS mac address data")
+            "Failed to parse DNS mac address data".into()
         }
     }
 }
@@ -387,21 +380,22 @@ fn parse_dns_ip_addr(data: &[u8]) -> nom::IResult<&[u8], String> {
         return get_ip_six(data);
     }
     warn!("[macos-unifiedlogs] Unknown DNS IP Addr type: {}", ip);
-    Ok((data, format!("Unknown DNS IP Addr type: {}", ip)))
+    Ok((data, format!("Unknown DNS IP Addr type: {ip}")))
 }
 
 /// Translate DNS add/rmv log values
-pub(crate) fn dns_addrmv(data: &str) -> String {
+pub fn dns_addrmv(data: &str) -> &'static str {
     if data == "1" {
-        return String::from("add");
+        return "add";
     }
-    String::from("rmv")
+    "rmv"
 }
 
 /// Translate DNS records to string
-pub(crate) fn dns_records(data: &str) -> String {
+pub fn dns_records(data: &str) -> &str {
     // Found at https://en.wikipedia.org/wiki/List_of_DNS_record_types
-    let message = match data {
+
+    (match data {
         "1" => "A",
         "2" => "NS",
         "5" => "CNAME",
@@ -457,13 +451,12 @@ pub(crate) fn dns_records(data: &str) -> String {
             );
             data
         }
-    };
-    message.to_string()
+    }) as _
 }
 
 /// Translate DNS response/reason? to string
-pub(crate) fn dns_reason(data: &str) -> String {
-    let message = match data {
+pub fn dns_reason(data: &str) -> &str {
+    (match data {
         "1" => "no-data",
         "4" => "query-suppressed",
         "3" => "no-dns-service",
@@ -473,13 +466,12 @@ pub(crate) fn dns_reason(data: &str) -> String {
             warn!("[macos-unifiedlogs] Unknown DNS Reason: {}", data);
             data
         }
-    };
-    message.to_string()
+    }) as _
 }
 
 /// Translate the DNS protocol used
-pub(crate) fn dns_protocol(data: &str) -> String {
-    let message = match data {
+pub fn dns_protocol(data: &str) -> &str {
+    (match data {
         "1" => "UDP",
         "2" => "TCP",
         //"3" => "HTTP",??
@@ -488,12 +480,11 @@ pub(crate) fn dns_protocol(data: &str) -> String {
             warn!("[macos-unifiedlogs] Unknown DNS Protocol: {}", data);
             data
         }
-    };
-    message.to_string()
+    }) as _
 }
 
 /// Get just the DNS flags associated with the DNS header
-pub(crate) fn dns_idflags(data: &str) -> String {
+pub fn dns_idflags(data: &str) -> Cow<'_, str> {
     let flags_results = data.parse::<u32>();
     let flags: u32 = match flags_results {
         Ok(results) => results,
@@ -502,7 +493,7 @@ pub(crate) fn dns_idflags(data: &str) -> String {
                 "[macos-unifiedlogs] Failed to convert ID Flags to int: {:?}",
                 err
             );
-            return data.to_string();
+            return data.into();
         }
     };
 
@@ -515,22 +506,22 @@ pub(crate) fn dns_idflags(data: &str) -> String {
                 "[macos-unifiedlogs] Failed to convert ID Flags to bytes: {:?}",
                 err
             );
-            return data.to_string();
+            return data.into();
         }
     }
 
     let message_result = parse_idflags(&bytes);
     match message_result {
-        Ok((_, result)) => result,
+        Ok((_, result)) => result.into_owned().into(),
         Err(err) => {
             error!("[macos-unifiedlogs] Failed to get ID Flags: {:?}", err);
-            data.to_string()
+            data.into()
         }
     }
 }
 
 /// Parse just the DNS flags associated with the DNS header
-fn parse_idflags(data: &[u8]) -> nom::IResult<&[u8], String> {
+fn parse_idflags(data: &[u8]) -> nom::IResult<&[u8], Cow<'_, str>> {
     let (dns_data, id_data) = take(size_of::<u16>())(data)?;
     let flag_results = get_dns_flags(dns_data);
 
@@ -540,19 +531,19 @@ fn parse_idflags(data: &[u8]) -> nom::IResult<&[u8], String> {
         Ok((_, result)) => result,
         Err(err) => {
             error!("[macos-unifiedlogs] Failed to parse ID Flags: {:?}", err);
-            String::from("Failed to parse ID Flags")
+            "Failed to parse ID Flags".into()
         }
     };
 
     let (_, flags) = be_u16(dns_data)?;
     Ok((
         dns_data,
-        format!("id: {:#X?}, flags: {:#X?} {}", id, flags, message),
+        format!("id: {id:#X?}, flags: {flags:#X?} {message}").into(),
     ))
 }
 
 /// Get just the DNS count data associated with the DNS header
-pub(crate) fn dns_counts(data: &str) -> String {
+pub fn dns_counts(data: &str) -> Cow<'_, str> {
     let flags_results = data.parse::<u64>();
     let flags: u64 = match flags_results {
         Ok(results) => results,
@@ -561,7 +552,7 @@ pub(crate) fn dns_counts(data: &str) -> String {
                 "[macos-unifiedlogs] Failed to convert counts to int: {:?}",
                 err
             );
-            return data.to_string();
+            return data.into();
         }
     };
 
@@ -574,16 +565,16 @@ pub(crate) fn dns_counts(data: &str) -> String {
                 "[macos-unifiedlogs] Failed to convert counts to bytes: {:?}",
                 err
             );
-            return data.to_string();
+            return data.into();
         }
     }
 
     let message_result = parse_counts(&bytes);
     match message_result {
-        Ok((_, result)) => result,
+        Ok((_, result)) => result.into(),
         Err(err) => {
             error!("[macos-unifiedlogs] Failed to get counts: {:?}", err);
-            data.to_string()
+            data.into()
         }
     }
 }
@@ -601,34 +592,30 @@ fn parse_counts(data: &[u8]) -> nom::IResult<&[u8], String> {
     let (_, additional) = be_u16(additional_data)?;
 
     let header_message = format!(
-        "Question Count: {}, Answer Record Count: {}, Authority Record Count: {}, Additional Record Count: {}",
-        question,
-        answer,
-        authority,
-        additional);
+        "Question Count: {question}, Answer Record Count: {answer}, Authority Record Count: {authority}, Additional Record Count: {additional}");
 
     Ok((dns_data, header_message))
 }
 
 /// Translate DNS yes/no log values
-pub(crate) fn dns_yes_no(data: &str) -> String {
+pub fn dns_yes_no(data: &str) -> &'static str {
     if data == "0" {
-        return String::from("no");
+        return "no";
     }
-    String::from("yes")
+    "yes"
 }
 
 /// Translate DNS acceptable log values
-pub(crate) fn dns_acceptable(data: &str) -> String {
+pub fn dns_acceptable(data: &str) -> &'static str {
     if data == "0" {
-        return String::from("unacceptable");
+        return "unacceptable";
     }
-    String::from("acceptable")
+    "acceptable"
 }
 
 /// Translate DNS getaddrinfo log values
-pub(crate) fn dns_getaddrinfo_opts(data: &str) -> String {
-    let message = match data {
+pub fn dns_getaddrinfo_opts(data: &str) -> &str {
+    match data {
         "0" => "0x0 {}",
         "8" => "0x8 {use-failover}",
         "12" => "0xC {in-app-browser, use-failover}",
@@ -637,8 +624,7 @@ pub(crate) fn dns_getaddrinfo_opts(data: &str) -> String {
             warn!("[macos-unifiedlogs] Unknown getaddrinfo options: {}", data);
             data
         }
-    };
-    message.to_string()
+    }
 }
 
 #[cfg(test)]

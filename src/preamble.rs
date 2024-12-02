@@ -20,8 +20,8 @@ pub struct LogPreamble {
 }
 impl LogPreamble {
     /// Get the preamble (first 16 bytes of all Unified Log entries (chunks)) to detect the log (chunk) type. Ex: Firehose, Statedump, Simpledump, Catalog, etc
-    pub fn detect_preamble(data: &[u8]) -> nom::IResult<&[u8], LogPreamble> {
-        let mut preamble = LogPreamble {
+    pub fn detect_preamble(data: &[u8]) -> nom::IResult<&[u8], Self> {
+        let mut preamble = Self {
             chunk_tag: 0,
             chunk_sub_tag: 0,
             chunk_data_size: 0,

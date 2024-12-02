@@ -11,12 +11,13 @@ use nom::{
     bytes::complete::{take, take_while},
     number::complete::{le_i32, le_u32, le_u8},
 };
-use std::mem::size_of;
+use std::{borrow::Cow, mem::size_of};
 
 /// Convert Open Directory error codes to message
-pub(crate) fn errors(oderror: &str) -> String {
+pub fn errors(oderror: &str) -> &str {
     // Found at https://developer.apple.com/documentation/opendirectory/odframeworkerrors?changes=__2&language=objc
-    let message = match oderror {
+
+    (match oderror {
         "5301" => "ODErrorCredentialsAccountDisabled",
         "5302" => "ODErrorCredentialsAccountExpired",
         "5303" => "ODErrorCredentialsAccountInactive",
@@ -88,14 +89,14 @@ pub(crate) fn errors(oderror: &str) -> String {
             );
             oderror
         }
-    };
-    message.to_string()
+    }) as _
 }
 
 /// Convert Open Directory member ids to string
-pub(crate) fn member_id_type(member_string: &str) -> String {
+pub fn member_id_type(member_string: &str) -> &str {
     // Found at /Library/Developer/CommandLineTools/SDKs/MacOSX12.3.sdk/usr/include/membership.h
-    let message = match member_string {
+
+    (match member_string {
         "0" => "UID",
         "1" => "GID",
         "3" => "SID",
@@ -114,56 +115,55 @@ pub(crate) fn member_id_type(member_string: &str) -> String {
             );
             member_string
         }
-    };
-    message.to_string()
+    }) as _
 }
 
 /// Convert Open Directory member details to string
-pub(crate) fn member_details(member_string: &str) -> String {
+pub fn member_details(member_string: &str) -> Cow<'_, str> {
     let decoded_data_result = decode_standard(member_string);
     let decoded_data = match decoded_data_result {
         Ok(result) => result,
         Err(err) => {
             error!("[macos-unifiedlogs] Failed to base64 decode open directory member details data {}, error: {:?}", member_string, err);
-            return String::from("Failed to base64 decode member details");
+            return "Failed to base64 decode member details".into();
         }
     };
     let message_result = get_member_data(&decoded_data);
     match message_result {
-        Ok((_, result)) => result,
+        Ok((_, result)) => result.into(),
         Err(err) => {
             error!(
                 "[macos-unifiedlogs] Failed to get open directory member details: {:?}",
                 err
             );
             format!(
-                "Failed to get open directory member details: {}",
-                member_string
+                "Failed to get open directory member details: {member_string}"
             )
+            .into()
         }
     }
 }
 
 /// Parse SID log data to SID string
-pub(crate) fn sid_details(sid_string: &str) -> String {
+pub fn sid_details(sid_string: &str) -> Cow<'static, str> {
     let decoded_data_result = decode_standard(sid_string);
     let decoded_data = match decoded_data_result {
         Ok(result) => result,
         Err(err) => {
             error!("[macos-unifiedlogs] Failed to base64 decode open directory SID details data {}, error: {:?}", sid_string, err);
-            return String::from("Failed to base64 decode SID details");
+            return "Failed to base64 decode SID details".into();
         }
     };
     let message_result = get_sid_data(&decoded_data);
     match message_result {
-        Ok((_, result)) => result,
+        Ok((_, result)) => result.into(),
         Err(err) => {
             error!(
                 "[macos-unifiedlogs] Failed to get open directory sid details: {:?}",
                 err
             );
 
-            format!("Failed to get open directory sid details: {}", sid_string)
+            format!("Failed to get open directory sid details: {sid_string}").into()
         }
     }
 }
@@ -182,25 +182,25 @@ fn get_member_data(data: &[u8]) -> nom::IResult<&[u8], String> {
     if uid_type.contains(&member_type) {
         let (details, uid) = get_member_id(member_details)?;
         member_details = details;
-        member_message = format!("user: {}", uid);
+        member_message = format!("user: {uid}");
     } else if user_type.contains(&member_type) {
         let (details, name) = get_member_string(member_details)?;
         member_details = details;
-        member_message = format!("user: {}", name);
+        member_message = format!("user: {name}");
     } else if gid_type.contains(&member_type) {
         let (details, gid) = get_member_id(member_details)?;
         member_details = details;
-        member_message = format!("group: {}", gid);
+        member_message = format!("group: {gid}");
     } else if group_type.contains(&member_type) {
         let (details, name) = get_member_string(member_details)?;
         member_details = details;
-        member_message = format!("group: {}", name);
+        member_message = format!("group: {name}");
     } else {
         warn!(
             "[macos-unifiedlogs] Unknown open directory member type: {}",
             member_type
         );
-        member_message = format!("Unknown Member type {}: @", member_type);
+        member_message = format!("Unknown Member type {member_type}: @");
     }
 
     let mut source_path = String::from(" <not found>");
@@ -211,10 +211,10 @@ fn get_member_data(data: &[u8]) -> nom::IResult<&[u8], String> {
     }
 
     if source_path != " <not found>" {
-        source_path = format!("@{}", source_path)
+        source_path = format!("@{source_path}");
     }
 
-    let message = format!("{}{}", member_message, source_path);
+    let message = format!("{member_message}{source_path}");
     Ok((member_details, message))
 }
 
@@ -235,7 +235,7 @@ fn get_member_string(data: &[u8]) -> nom::IResult<&[u8], String> {
 
     let (_, value) = extract_string(string_data)?;
     if value != "Could not extract string" {
-        string_value = value;
+        value.clone_into(&mut string_value);
     }
 
     // Nom of end string character
@@ -257,14 +257,14 @@ fn get_sid_data(data: &[u8]) -> nom::IResult<&[u8], String> {
     let (_, authority) = le_u8(authority_data)?;
     let (_, subauthority) = le_u8(subauthority_data)?;
 
-    let mut message = format!("S-{}-{}-{}", revision, authority, subauthority);
+    let mut message = format!("S-{revision}-{authority}-{subauthority}");
 
     let subauthorit_size = 4;
     while sid_details.len() >= subauthorit_size {
         let (details, additional_subauthority_data) = take(subauthorit_size)(sid_details)?;
         sid_details = details;
         let (_, subauthority) = le_u32(additional_subauthority_data)?;
-        message = format!("{}-{}", message, subauthority);
+        message = format!("{message}-{subauthority}");
     }
     Ok((sid_details, message))
 }

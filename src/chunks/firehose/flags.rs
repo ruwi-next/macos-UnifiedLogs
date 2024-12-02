@@ -29,8 +29,8 @@ impl FirehoseFormatters {
     pub fn firehose_formatter_flags<'a>(
         data: &'a [u8],
         firehose_flags: &u16,
-    ) -> nom::IResult<&'a [u8], FirehoseFormatters> {
-        let mut formatter_flags = FirehoseFormatters {
+    ) -> nom::IResult<&'a [u8], Self> {
+        let mut formatter_flags = Self {
             main_exe: false,
             shared_cache: false,
             has_large_offset: 0,
@@ -100,7 +100,7 @@ impl FirehoseFormatters {
             }
             0x2 => {
                 debug!("[macos-unifiedlogs] Firehose flag: main_exe");
-                formatter_flags.main_exe = true
+                formatter_flags.main_exe = true;
             }
             0x4 => {
                 debug!("[macos-unifiedlogs] Firehose flag: shared_cache");
@@ -116,7 +116,7 @@ impl FirehoseFormatters {
                 debug!("[macos-unifiedlogs] Firehose flag: uuid_relative");
                 let (firehose_input, uuid_relative) = take(size_of::<u128>())(input)?;
                 let (_, firehose_uuid_relative) = be_u128(uuid_relative)?;
-                formatter_flags.uuid_relative = format!("{:X}", firehose_uuid_relative);
+                formatter_flags.uuid_relative = format!("{firehose_uuid_relative:X}");
                 input = firehose_input;
             }
             _ => {

@@ -36,8 +36,8 @@ pub struct ChunksetChunk {
 
 impl ChunksetChunk {
     /// Parse the Chunkset data that contains the actual log entries
-    pub fn parse_chunkset(data: &[u8]) -> nom::IResult<&[u8], ChunksetChunk> {
-        let mut chunkset_chunk = ChunksetChunk {
+    pub fn parse_chunkset(data: &[u8]) -> nom::IResult<&[u8], Self> {
+        let mut chunkset_chunk = Self {
             chunk_tag: 0,
             chunk_sub_tag: 0,
             chunk_data_size: 0,
@@ -116,10 +116,13 @@ impl ChunksetChunk {
     }
 
     /// Parse each log (chunk) in the decompressed Chunkset data
-    pub fn parse_chunkset_data<'a>(
+    pub fn parse_chunkset_data<'a, 'b>(
         data: &'a [u8],
-        unified_log_data: &mut UnifiedLogCatalogData,
-    ) -> nom::IResult<&'a [u8], ()> {
+        unified_log_data: &'b mut UnifiedLogCatalogData<'a>,
+    ) -> nom::IResult<&'b [u8], ()>
+    where
+        'a: 'b,
+    {
         let mut input = data;
         let chunk_preamble_size = 16; // Include preamble size in total chunk size
 
@@ -130,7 +133,7 @@ impl ChunksetChunk {
 
             // Grab all data associated with log (chunk) data
             let (data, chunk_data) = take(chunk_size + chunk_preamble_size)(input)?;
-            ChunksetChunk::get_chunkset_data(chunk_data, preamble.chunk_tag, unified_log_data);
+            Self::get_chunkset_data(chunk_data, preamble.chunk_tag, unified_log_data);
 
             // Nom all zero padding
             let (remaining_data, _) = take_while(|b: u8| b == 0)(data)?;
@@ -151,11 +154,13 @@ impl ChunksetChunk {
     }
 
     // Parse the log entry (chunk) chunk based on type
-    fn get_chunkset_data(
-        data: &[u8],
+    fn get_chunkset_data<'a, 'b>(
+        data: &'a [u8],
         chunk_type: u32,
-        unified_log_data: &mut UnifiedLogCatalogData,
-    ) {
+        unified_log_data: &'b mut UnifiedLogCatalogData<'a>,
+    ) where
+        'a: 'b,
+    {
         let firehose_chunk = 0x6001;
         let oversize_chunk = 0x6002;
         let statedump_chunk = 0x6003;

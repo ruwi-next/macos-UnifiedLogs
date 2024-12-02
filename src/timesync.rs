@@ -39,11 +39,11 @@ pub struct Timesync {
 
 impl TimesyncBoot {
     /// Parse the Unified Log timesync files
-    pub fn parse_timesync_data(data: &[u8]) -> nom::IResult<&[u8], Vec<TimesyncBoot>> {
-        let mut timesync_data: Vec<TimesyncBoot> = Vec::new();
+    pub fn parse_timesync_data(data: &[u8]) -> nom::IResult<&[u8], Vec<Self>> {
+        let mut timesync_data: Vec<Self> = Vec::new();
         let mut input = data;
 
-        let mut timesync_boot = TimesyncBoot {
+        let mut timesync_boot = Self {
             signature: 0,
             header_size: 0,
             unknown: 0,
@@ -62,7 +62,7 @@ impl TimesyncBoot {
 
             let timesync_sig: u32 = 0x207354;
             if timesync_signature == timesync_sig {
-                let (timesync_input, timesync) = TimesyncBoot::parse_timesync(input)?;
+                let (timesync_input, timesync) = Self::parse_timesync(input)?;
                 timesync_boot.timesync.push(timesync);
                 input = timesync_input;
             } else {
@@ -70,7 +70,7 @@ impl TimesyncBoot {
                     timesync_data.push(timesync_boot);
                 }
                 let (timesync_input, timesync_boot_data) =
-                    TimesyncBoot::parse_timesync_boot(input)?;
+                    Self::parse_timesync_boot(input)?;
                 timesync_boot = timesync_boot_data;
                 input = timesync_input;
             }
@@ -80,7 +80,7 @@ impl TimesyncBoot {
         Ok((input, timesync_data))
     }
 
-    fn parse_timesync_boot(data: &[u8]) -> nom::IResult<&[u8], TimesyncBoot> {
+    fn parse_timesync_boot(data: &[u8]) -> nom::IResult<&[u8], Self> {
         let (input, signature) = take(size_of::<u16>())(data)?;
         let (_, timesync_signature) = le_u16(signature)?;
 
@@ -111,11 +111,11 @@ impl TimesyncBoot {
         let (_, timesync_timezone_offset_mins) = le_u32(timezone_offset_mins)?;
         let (_, timesync_daylight_savings) = le_u32(daylight_savings)?;
 
-        let timesync_boot = TimesyncBoot {
+        let timesync_boot = Self {
             signature: timesync_signature,
             header_size: timesync_header_size,
             unknown: timesync_unknown,
-            boot_uuid: format!("{:X}", timesync_boot_uuid),
+            boot_uuid: format!("{timesync_boot_uuid:X}"),
             timebase_numerator: timesync_timebase_numerator,
             timebase_denominator: timesync_timebase_denominator,
             boot_time: timesync_boot_time,
@@ -171,7 +171,7 @@ impl TimesyncBoot {
 
     /// Calculate timestamp for firehose log entry
     pub fn get_timestamp(
-        timesync_data: &[TimesyncBoot],
+        timesync_data: &[Self],
         boot_uuid: &str,
         firehose_log_delta_time: u64,
         firehose_preamble_time: u64,
@@ -365,7 +365,7 @@ mod tests {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_big_sur.logarchive/timesync");
 
-        let timesync_data = collect_timesync(&test_path.display().to_string()).unwrap();
+        let timesync_data = collect_timesync(&test_path).unwrap();
 
         let boot_uuid = "A2A9017676CF421C84DC9BBD6263FEE7";
         let firehose_preamble_continous_time = 2818326118;
@@ -384,7 +384,7 @@ mod tests {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_monterey.logarchive/timesync");
 
-        let timesync_data = collect_timesync(&test_path.display().to_string()).unwrap();
+        let timesync_data = collect_timesync(&test_path).unwrap();
 
         let boot_uuid = "3E12B435814B4C62918CEBC0826F06B8";
         let firehose_preamble_continous_time = 2818326118;
@@ -403,7 +403,7 @@ mod tests {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_monterey.logarchive/timesync");
 
-        let timesync_data = collect_timesync(&test_path.display().to_string()).unwrap();
+        let timesync_data = collect_timesync(&test_path).unwrap();
 
         let boot_uuid = "3E12B435814B4C62918CEBC0826F06B8";
         let firehose_preamble_continous_time = 9898326118;

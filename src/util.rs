@@ -17,21 +17,21 @@ use nom::bytes::complete::take_while;
 use std::str::from_utf8;
 
 /// Calculate 8 byte padding
-pub(crate) fn padding_size(data: u64) -> u64 {
+pub fn padding_size(data: u64) -> u64 {
     let alignment = 8;
     // Calculate padding to achieve 64-bit alignment
     (alignment - (data & (alignment - 1))) & (alignment - 1)
 }
 
 /// Calculate 4 byte padding
-pub(crate) fn padding_size_four(data: u64) -> u64 {
+pub fn padding_size_four(data: u64) -> u64 {
     let alignment = 4;
     // Calculate padding to achieve 64-bit alignment
     (alignment - (data & (alignment - 1))) & (alignment - 1)
 }
 
 /// Extract a size based on provided string size from Firehose string item entries
-pub(crate) fn extract_string_size(data: &[u8], message_size: u64) -> nom::IResult<&[u8], String> {
+pub fn extract_string_size(data: &[u8], message_size: u64) -> nom::IResult<&[u8], String> {
     let null_string = 0;
     if message_size == null_string {
         return Ok((data, String::from("(null)")));
@@ -65,7 +65,7 @@ pub(crate) fn extract_string_size(data: &[u8], message_size: u64) -> nom::IResul
 }
 
 /// Extract strings that contain end of string characters
-pub(crate) fn extract_string(data: &[u8]) -> nom::IResult<&[u8], String> {
+pub fn extract_string(data: &[u8]) -> nom::IResult<&[u8], &str> {
     let last_value = data.last();
     match last_value {
         Some(value) => {
@@ -77,20 +77,20 @@ pub(crate) fn extract_string(data: &[u8]) -> nom::IResult<&[u8], String> {
                 let (input, path) = take(data.len())(data)?;
                 let path_string = from_utf8(path);
                 match path_string {
-                    Ok(results) => return Ok((input, results.to_string())),
+                    Ok(results) => return Ok((input, results)),
                     Err(err) => {
                         warn!(
                             "[macos-unifiedlogs] Failed to extract full string: {:?}",
                             err
                         );
-                        return Ok((input, String::from("Could not extract string")));
+                        return Ok((input, "Could not extract string"));
                     }
                 }
             }
         }
         None => {
             error!("[macos-unifiedlogs] Cannot extract string. Empty input.");
-            return Ok((data, String::from("Cannot extract string. Empty input.")));
+            return Ok((data, "Cannot extract string. Empty input."));
         }
     }
 
@@ -98,32 +98,32 @@ pub(crate) fn extract_string(data: &[u8]) -> nom::IResult<&[u8], String> {
     let path_string = from_utf8(path);
     match path_string {
         Ok(results) => {
-            return Ok((input, results.to_string()));
+            return Ok((input, results));
         }
         Err(err) => {
             warn!("[macos-unifiedlogs] Failed to get string: {:?}", err);
         }
     }
-    Ok((input, String::from("Could not extract string")))
+    Ok((input, "Could not extract string"))
 }
 
 /// Clean and format UUIDs to be pretty
-pub(crate) fn clean_uuid(uuid_format: &str) -> String {
+pub fn clean_uuid(uuid_format: &str) -> String {
     uuid_format.replace([',', '[', ']', ' '], "")
 }
 
 /// Base64 encode data use the STANDARD engine (alphabet along with "+" and "/")
-pub(crate) fn encode_standard(data: &[u8]) -> String {
+pub fn encode_standard(data: &[u8]) -> String {
     general_purpose::STANDARD.encode(data)
 }
 
 /// Base64 decode data use the STANDARD engine (alphabet along with "+" and "/")
-pub(crate) fn decode_standard(data: &str) -> Result<Vec<u8>, DecodeError> {
+pub fn decode_standard(data: &str) -> Result<Vec<u8>, DecodeError> {
     general_purpose::STANDARD.decode(data)
 }
 
 /// Convert `UnixEpoch` time to ISO RFC 3339
-pub(crate) fn unixepoch_to_iso(timestamp: &i64) -> String {
+pub fn unixepoch_to_iso(timestamp: &i64) -> String {
     let date_time_result = Utc.timestamp_nanos(*timestamp);
     date_time_result.to_rfc3339_opts(SecondsFormat::Nanos, true)
 }

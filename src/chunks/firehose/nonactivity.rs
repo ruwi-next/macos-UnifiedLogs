@@ -38,8 +38,8 @@ impl FirehoseNonActivity {
     pub fn parse_non_activity<'a>(
         data: &'a [u8],
         firehose_flags: &u16,
-    ) -> nom::IResult<&'a [u8], FirehoseNonActivity> {
-        let mut non_activity = FirehoseNonActivity {
+    ) -> nom::IResult<&'a [u8], Self> {
+        let mut non_activity = Self {
             unknown_activity_id: 0,
             unknown_sentinal: 0,
             private_strings_offset: 0,
@@ -132,14 +132,14 @@ impl FirehoseNonActivity {
 
     /// Get base log message string formatter from shared cache strings (dsc) or UUID text file for firehose non-activity log entries (chunks)
     pub fn get_firehose_nonactivity_strings<'a>(
-        firehose: &FirehoseNonActivity,
+        firehose: &'a Self,
         strings_data: &'a [UUIDText],
         shared_strings: &'a [SharedCacheStrings],
         string_offset: u64,
-        first_proc_id: &u64,
-        second_proc_id: &u32,
-        catalogs: &CatalogChunk,
-    ) -> nom::IResult<&'a [u8], MessageData> {
+        first_proc_id: u64,
+        second_proc_id: u32,
+        catalogs: &'a CatalogChunk,
+    ) -> nom::IResult<&'a [u8], MessageData<'a>> {
         if firehose.firehose_formatters.shared_cache
             || (firehose.firehose_formatters.large_shared_cache != 0)
         {
@@ -157,14 +157,14 @@ impl FirehoseNonActivity {
                 {
                     large_offset = firehose.firehose_formatters.large_shared_cache / 2;
                     // Combine large offset value with current string offset to get the true offset
-                    extra_offset_value = format!("{:X}{:08X}", large_offset, string_offset);
+                    extra_offset_value = format!("{large_offset:X}{string_offset:08X}");
                 } else if firehose.firehose_formatters.shared_cache {
                     // Large offset is 8 if shared_cache flag is set
                     large_offset = 8;
                     let add_offset = 0x10000000 * u64::from(large_offset);
                     extra_offset_value = format!("{:X}", add_offset + string_offset);
                 } else {
-                    extra_offset_value = format!("{:X}{:08X}", large_offset, string_offset);
+                    extra_offset_value = format!("{large_offset:X}{string_offset:08X}");
                 }
 
                 let extra_offset_value_result = u64::from_str_radix(&extra_offset_value, 16);
@@ -253,7 +253,7 @@ impl FirehoseNonActivity {
 #[cfg(test)]
 mod tests {
     use super::FirehoseNonActivity;
-    use crate::parser::{collect_shared_strings, collect_strings, parse_log};
+    use crate::parser::{buffer_from_path, collect_shared_strings, collect_strings, parse_log};
     use std::path::PathBuf;
 
     #[test]
@@ -297,15 +297,15 @@ mod tests {
     fn test_get_firehose_non_activity_big_sur() {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_big_sur.logarchive");
-        let string_results = collect_strings(&test_path.display().to_string()).unwrap();
+        let string_results = collect_strings(&test_path).unwrap();
 
         test_path.push("dsc");
-        let shared_strings_results =
-            collect_shared_strings(&test_path.display().to_string()).unwrap();
+        let shared_strings_results = collect_shared_strings(&test_path).unwrap();
         test_path.pop();
 
         test_path.push("Persist/0000000000000004.tracev3");
-        let log_data = parse_log(&test_path.display().to_string()).unwrap();
+        let data = buffer_from_path(&test_path).unwrap();
+        let log_data = parse_log(&data).unwrap();
 
         let activity_type = 0x4;
 
@@ -319,8 +319,8 @@ mod tests {
                                 &string_results,
                                 &shared_strings_results,
                                 firehose.format_string_location as u64,
-                                &preamble.first_number_proc_id,
-                                &preamble.second_number_proc_id,
+                                preamble.first_number_proc_id,
+                                preamble.second_number_proc_id,
                                 &catalog_data.catalog,
                             )
                             .unwrap();

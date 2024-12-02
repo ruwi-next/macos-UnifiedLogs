@@ -24,8 +24,8 @@ pub struct FirehoseFormatterError {
 
 impl ParseError<&[u8]> for FirehoseError {
     fn from_error_kind(input: &[u8], kind: ErrorKind) -> Self {
-        let message = format!("Failed to parse firehose data: {:?}: {:?}", kind, input);
-        FirehoseError { message }
+        let message = format!("Failed to parse firehose data: {kind:?}: {input:?}");
+        Self { message }
     }
 
     fn append(input: &[u8], kind: ErrorKind, other: Self) -> Self {
@@ -33,17 +33,16 @@ impl ParseError<&[u8]> for FirehoseError {
             "Failed to parse firehose data: {} {:?}: {:?}",
             other.message, kind, input
         );
-        FirehoseError { message }
+        Self { message }
     }
 }
 
 impl ParseError<&[u8]> for CatalogProcessUUIDEntryError {
     fn from_error_kind(input: &[u8], kind: ErrorKind) -> Self {
         let message = format!(
-            "Failed to parse Catalog Process UUID Entry metadata: {:?}: {:?}",
-            kind, input
+            "Failed to parse Catalog Process UUID Entry metadata: {kind:?}: {input:?}"
         );
-        CatalogProcessUUIDEntryError { message }
+        Self { message }
     }
 
     fn append(input: &[u8], kind: ErrorKind, other: Self) -> Self {
@@ -51,14 +50,14 @@ impl ParseError<&[u8]> for CatalogProcessUUIDEntryError {
             "Failed to parse Catalog Process UUID Entry metadata: {} {:?}: {:?}",
             other.message, kind, input
         );
-        CatalogProcessUUIDEntryError { message }
+        Self { message }
     }
 }
 
 impl ParseError<&[u8]> for FirehoseFormatterError {
     fn from_error_kind(input: &[u8], kind: ErrorKind) -> Self {
-        let message = format!("Unknown firehose formatter flag: {:?}: {:?}", kind, input);
-        FirehoseFormatterError { message }
+        let message = format!("Unknown firehose formatter flag: {kind:?}: {input:?}");
+        Self { message }
     }
 
     fn append(input: &[u8], kind: ErrorKind, other: Self) -> Self {
@@ -66,7 +65,7 @@ impl ParseError<&[u8]> for FirehoseFormatterError {
             "Unknown firehose formatter flag: {} {:?}: {:?}",
             other.message, kind, input
         );
-        FirehoseFormatterError { message }
+        Self { message }
     }
 }
 
@@ -86,13 +85,13 @@ impl std::error::Error for ParserError {}
 impl fmt::Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ParserError::Path => write!(f, "Failed to open file path"),
-            ParserError::Dir => write!(f, "Failed to open directory path"),
-            ParserError::Tracev3Parse => write!(f, "Failed to parse tracev3 file"),
-            ParserError::Read => write!(f, "Failed to read file"),
-            ParserError::Timesync => write!(f, "Failed to parse timesync file"),
-            ParserError::Dsc => write!(f, "Failed to parse dsc file"),
-            ParserError::UUIDText => write!(f, "Failedto parse UUIDtext file"),
+            Self::Path => write!(f, "Failed to open file path"),
+            Self::Dir => write!(f, "Failed to open directory path"),
+            Self::Tracev3Parse => write!(f, "Failed to parse tracev3 file"),
+            Self::Read => write!(f, "Failed to read file"),
+            Self::Timesync => write!(f, "Failed to parse timesync file"),
+            Self::Dsc => write!(f, "Failed to parse dsc file"),
+            Self::UUIDText => write!(f, "Failedto parse UUIDtext file"),
         }
     }
 }

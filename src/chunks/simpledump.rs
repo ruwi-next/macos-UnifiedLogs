@@ -37,8 +37,8 @@ pub struct SimpleDump {
 
 impl SimpleDump {
     /// Parse Simpledump log entry.  Introduced in macOS Monterey (12)
-    pub fn parse_simpledump(data: &[u8]) -> nom::IResult<&[u8], SimpleDump> {
-        let mut simpledump_resuls = SimpleDump {
+    pub fn parse_simpledump(data: &[u8]) -> nom::IResult<&[u8], Self> {
+        let mut simpledump_resuls = Self {
             chunk_tag: 0,
             chunk_subtag: 0,
             chunk_data_size: 0,
@@ -89,8 +89,8 @@ impl SimpleDump {
             le_u32(unknown_number_message_strings)?;
         let (_, simpledump_unknown_size_subsystem_string) = le_u32(unknown_size_subsystem_string)?;
         let (_, simpledump_unknown_size_message_string) = le_u32(unknown_size_message_string)?;
-        let sender_uuid_string = format!("{:02X?}", sender_uuid);
-        let dsc_uuid_string = format!("{:02X?}", dsc_uuid);
+        let sender_uuid_string = format!("{sender_uuid:02X?}");
+        let dsc_uuid_string = format!("{dsc_uuid:02X?}");
 
         simpledump_resuls.chunk_tag = simpledump_chunk_tag;
         simpledump_resuls.chunk_subtag = simpledump_chunk_sub_tag;
@@ -115,11 +115,11 @@ impl SimpleDump {
 
         if !subsystem_string.is_empty() {
             let (_, simpledump_subsystem_string) = extract_string(subsystem_string)?;
-            simpledump_resuls.subsystem = simpledump_subsystem_string;
+            simpledump_subsystem_string.clone_into(&mut simpledump_resuls.subsystem);
         }
         if !message_string.is_empty() {
             let (_, simpledump_message_string) = extract_string(message_string)?;
-            simpledump_resuls.message_string = simpledump_message_string;
+            simpledump_message_string.clone_into(&mut simpledump_resuls.message_string);
         }
         Ok((input, simpledump_resuls))
     }
