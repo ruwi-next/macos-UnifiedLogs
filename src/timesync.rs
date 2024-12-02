@@ -354,7 +354,7 @@ mod tests {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_big_sur.logarchive/timesync");
 
-        let timesync_data = collect_timesync(&test_path.display().to_string()).unwrap();
+        let timesync_data = collect_timesync(&test_path).unwrap();
 
         let boot_uuid = "A2A9017676CF421C84DC9BBD6263FEE7";
         let firehose_preamble_continous_time = 2818326118;
@@ -373,7 +373,7 @@ mod tests {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_monterey.logarchive/timesync");
 
-        let timesync_data = collect_timesync(&test_path.display().to_string()).unwrap();
+        let timesync_data = collect_timesync(&test_path).unwrap();
 
         let boot_uuid = "3E12B435814B4C62918CEBC0826F06B8";
         let firehose_preamble_continous_time = 2818326118;
@@ -392,7 +392,7 @@ mod tests {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_monterey.logarchive/timesync");
 
-        let timesync_data = collect_timesync(&test_path.display().to_string()).unwrap();
+        let timesync_data = collect_timesync(&test_path).unwrap();
 
         let boot_uuid = "3E12B435814B4C62918CEBC0826F06B8";
         let firehose_preamble_continous_time = 9898326118;

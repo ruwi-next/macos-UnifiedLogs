@@ -630,15 +630,14 @@ mod tests {
     fn test_extract_shared_strings_nonactivity() {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_big_sur.logarchive");
-        let strings = collect_strings(&test_path.display().to_string()).unwrap();
+        let strings = collect_strings(&test_path).unwrap();
 
         test_path.push("dsc");
-        let shared_strings_results =
-            collect_shared_strings(&test_path.display().to_string()).unwrap();
+        let shared_strings_results = collect_shared_strings(&test_path).unwrap();
         test_path.pop();
 
         test_path.push("Persist/0000000000000002.tracev3");
-        let log_data = parse_log(&test_path.display().to_string()).unwrap();
+        let log_data = parse_log(&test_path).unwrap();
 
         let test_offset = 1331408102;
         let test_first_proc_id = 45;
@@ -670,15 +669,14 @@ mod tests {
     fn test_extract_shared_strings_nonactivity_bad_offset() {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_big_sur.logarchive");
-        let strings = collect_strings(&test_path.display().to_string()).unwrap();
+        let strings = collect_strings(&test_path).unwrap();
 
         test_path.push("dsc");
-        let shared_strings_results =
-            collect_shared_strings(&test_path.display().to_string()).unwrap();
+        let shared_strings_results = collect_shared_strings(&test_path).unwrap();
         test_path.pop();
 
         test_path.push("Persist/0000000000000002.tracev3");
-        let log_data = parse_log(&test_path.display().to_string()).unwrap();
+        let log_data = parse_log(&test_path).unwrap();
 
         let bad_offset = 7;
         let test_first_proc_id = 45;
@@ -707,15 +705,14 @@ mod tests {
     fn test_extract_shared_strings_nonactivity_dynamic() {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_big_sur.logarchive");
-        let strings = collect_strings(&test_path.display().to_string()).unwrap();
+        let strings = collect_strings(&test_path).unwrap();
 
         test_path.push("dsc");
-        let shared_strings_results =
-            collect_shared_strings(&test_path.display().to_string()).unwrap();
+        let shared_strings_results = collect_shared_strings(&test_path).unwrap();
         test_path.pop();
 
         test_path.push("Persist/0000000000000002.tracev3");
-        let log_data = parse_log(&test_path.display().to_string()).unwrap();
+        let log_data = parse_log(&test_path).unwrap();
 
         let test_offset = 2420246585;
         let test_first_proc_id = 32;
@@ -747,10 +744,10 @@ mod tests {
     fn test_extract_format_strings_nonactivity() {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_big_sur.logarchive");
-        let strings = collect_strings(&test_path.display().to_string()).unwrap();
+        let strings = collect_strings(&test_path).unwrap();
 
         test_path.push("Persist/0000000000000002.tracev3");
-        let log_data = parse_log(&test_path.display().to_string()).unwrap();
+        let log_data = parse_log(&test_path).unwrap();
 
         let test_offset = 14960;
         let test_first_proc_id = 45;
@@ -778,10 +775,10 @@ mod tests {
     fn test_extract_format_strings_nonactivity_bad_offset() {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_big_sur.logarchive");
-        let strings = collect_strings(&test_path.display().to_string()).unwrap();
+        let strings = collect_strings(&test_path).unwrap();
 
         test_path.push("Persist/0000000000000002.tracev3");
-        let log_data = parse_log(&test_path.display().to_string()).unwrap();
+        let log_data = parse_log(&test_path).unwrap();
 
         let bad_offset = 1;
         let test_first_proc_id = 45;
@@ -808,10 +805,10 @@ mod tests {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_big_sur.logarchive");
 
-        let strings = collect_strings(&test_path.display().to_string()).unwrap();
+        let strings = collect_strings(&test_path).unwrap();
 
         test_path.push("Persist/0000000000000002.tracev3");
-        let log_data = parse_log(&test_path.display().to_string()).unwrap();
+        let log_data = parse_log(&test_path).unwrap();
 
         let test_offset = 2147519968;
         let test_first_proc_id = 38;
@@ -840,10 +837,10 @@ mod tests {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_big_sur.logarchive");
 
-        let strings = collect_strings(&test_path.display().to_string()).unwrap();
+        let strings = collect_strings(&test_path).unwrap();
 
         test_path.push("Persist/0000000000000002.tracev3");
-        let log_data = parse_log(&test_path.display().to_string()).unwrap();
+        let log_data = parse_log(&test_path).unwrap();
 
         let bad_offset = 55;
         let test_first_proc_id = 38;
@@ -869,10 +866,10 @@ mod tests {
     fn test_extract_absolute_strings_nonactivity() {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_big_sur.logarchive");
-        let strings = collect_strings(&test_path.display().to_string()).unwrap();
+        let strings = collect_strings(&test_path).unwrap();
 
         test_path.push("Persist/0000000000000002.tracev3");
-        let log_data = parse_log(&test_path.display().to_string()).unwrap();
+        let log_data = parse_log(&test_path).unwrap();
 
         let test_offset = 396912;
         let test_absolute_offset = 280925241119206;
@@ -899,10 +896,10 @@ mod tests {
     fn test_extract_absolute_strings_nonactivity_bad_offset() {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_big_sur.logarchive");
-        let strings = collect_strings(&test_path.display().to_string()).unwrap();
+        let strings = collect_strings(&test_path).unwrap();
 
         test_path.push("Persist/0000000000000002.tracev3");
-        let log_data = parse_log(&test_path.display().to_string()).unwrap();
+        let log_data = parse_log(&test_path).unwrap();
 
         let test_offset = 396912;
         let bad_offset = 12;
@@ -930,10 +927,10 @@ mod tests {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_big_sur.logarchive");
 
-        let strings = collect_strings(&test_path.display().to_string()).unwrap();
+        let strings = collect_strings(&test_path).unwrap();
 
         test_path.push("Persist/0000000000000002.tracev3");
-        let log_data = parse_log(&test_path.display().to_string()).unwrap();
+        let log_data = parse_log(&test_path).unwrap();
 
         let test_offset = 102;
         let test_absolute_offset = 102;
@@ -964,10 +961,10 @@ mod tests {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_big_sur.logarchive");
 
-        let strings = collect_strings(&test_path.display().to_string()).unwrap();
+        let strings = collect_strings(&test_path).unwrap();
 
         test_path.push("Persist/0000000000000002.tracev3");
-        let log_data = parse_log(&test_path.display().to_string()).unwrap();
+        let log_data = parse_log(&test_path).unwrap();
 
         let bad_offset = 111;
         let test_absolute_offset = 102;
@@ -1000,9 +997,9 @@ mod tests {
     fn test_extract_alt_uuid_strings() {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_big_sur.logarchive");
-        let strings = collect_strings(&test_path.display().to_string()).unwrap();
+        let strings = collect_strings(&test_path).unwrap();
         test_path.push("Persist/0000000000000005.tracev3");
-        let log_data = parse_log(&test_path.display().to_string()).unwrap();
+        let log_data = parse_log(&test_path).unwrap();
 
         let first_proc_id = 105;
         let second_proc_id = 240;
@@ -1035,7 +1032,7 @@ mod tests {
         test_path.push("tests/test_data/system_logs_big_sur.logarchive");
 
         test_path.push("Persist/0000000000000002.tracev3");
-        let log_data = parse_log(&test_path.display().to_string()).unwrap();
+        let log_data = parse_log(&test_path).unwrap();
 
         let test_first_proc_id = 136;
         let test_second_proc_id = 342;
@@ -1053,7 +1050,7 @@ mod tests {
     fn test_get_uuid_image_path() {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_big_sur.logarchive");
-        let strings = collect_strings(&test_path.display().to_string()).unwrap();
+        let strings = collect_strings(&test_path).unwrap();
 
         let test_uuid = "B736DF1625F538248E9527A8CEC4991E";
 

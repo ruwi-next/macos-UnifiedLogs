@@ -171,15 +171,14 @@ mod tests {
         let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         test_path.push("tests/test_data/system_logs_big_sur.logarchive");
 
-        let string_results = collect_strings(&test_path.display().to_string()).unwrap();
+        let string_results = collect_strings(&test_path).unwrap();
 
         test_path.push("dsc");
-        let shared_strings_results =
-            collect_shared_strings(&test_path.display().to_string()).unwrap();
+        let shared_strings_results = collect_shared_strings(&test_path).unwrap();
         test_path.pop();
 
         test_path.push("timesync");
-        let timesync_data = collect_timesync(&test_path.display().to_string()).unwrap();
+        let timesync_data = collect_timesync(&test_path).unwrap();
         test_path.pop();
 
         test_path.push("Persist/0000000000000002.tracev3");

@@ -5,7 +5,7 @@
 // is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use macos_unifiedlogs::{
@@ -16,8 +16,8 @@ use macos_unifiedlogs::{
     uuidtext::UUIDText,
 };
 
-fn big_sur_parse_log(path: &str) {
-    let _ = parse_log(&path).unwrap();
+fn big_sur_parse_log(path: &Path) {
+    let _ = parse_log(path).unwrap();
 }
 
 fn bench_build_log(
@@ -42,27 +42,27 @@ fn big_sur_single_log_benchpress(c: &mut Criterion) {
         .push("tests/test_data/system_logs_big_sur.logarchive/Persist/0000000000000004.tracev3");
 
     c.bench_function("Benching Parsing One Big Sur Log", |b| {
-        b.iter(|| big_sur_parse_log(&test_path.display().to_string()))
+        b.iter(|| big_sur_parse_log(&test_path))
     });
 }
 
 fn big_sur_build_log_benchbress(c: &mut Criterion) {
     let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     test_path.push("tests/test_data/system_logs_big_sur.logarchive");
-    let string_results = collect_strings(&test_path.display().to_string()).unwrap();
+    let string_results = collect_strings(&test_path).unwrap();
 
     test_path.push("dsc");
-    let shared_strings_results = collect_shared_strings(&test_path.display().to_string()).unwrap();
+    let shared_strings_results = collect_shared_strings(&test_path).unwrap();
     test_path.pop();
 
     test_path.push("timesync");
-    let timesync_data = collect_timesync(&test_path.display().to_string()).unwrap();
+    let timesync_data = collect_timesync(&test_path).unwrap();
     test_path.pop();
 
     test_path.push("Persist/0000000000000004.tracev3");
     let exclude_missing = false;
 
-    let log_data = parse_log(&test_path.display().to_string()).unwrap();
+    let log_data = parse_log(&test_path).unwrap();
 
     c.bench_function("Benching Building One Big Sur Log", |b| {
         b.iter(|| {

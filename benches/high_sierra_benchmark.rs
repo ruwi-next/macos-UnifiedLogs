@@ -5,7 +5,7 @@
 // is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and limitations under the License.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use macos_unifiedlogs::{
@@ -15,8 +15,8 @@ use macos_unifiedlogs::{
     unified_log::UnifiedLogData,
     uuidtext::UUIDText,
 };
-fn high_sierra_parse_log(path: &str) {
-    let _ = parse_log(&path).unwrap();
+fn high_sierra_parse_log(path: &Path) {
+    let _ = parse_log(path).unwrap();
 }
 
 fn bench_build_log(
@@ -42,27 +42,27 @@ fn high_sierra_single_log_benchpress(c: &mut Criterion) {
     );
 
     c.bench_function("Benching Parsing One High Sierra Log", |b| {
-        b.iter(|| high_sierra_parse_log(&test_path.display().to_string()))
+        b.iter(|| high_sierra_parse_log(&test_path))
     });
 }
 
 fn high_sierra_build_log_benchbress(c: &mut Criterion) {
     let mut test_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     test_path.push("tests/test_data/system_logs_high_sierra.logarchive");
-    let string_results = collect_strings(&test_path.display().to_string()).unwrap();
+    let string_results = collect_strings(&test_path).unwrap();
 
     test_path.push("dsc");
-    let shared_strings_results = collect_shared_strings(&test_path.display().to_string()).unwrap();
+    let shared_strings_results = collect_shared_strings(&test_path).unwrap();
     test_path.pop();
 
     test_path.push("timesync");
-    let timesync_data = collect_timesync(&test_path.display().to_string()).unwrap();
+    let timesync_data = collect_timesync(&test_path).unwrap();
     test_path.pop();
 
     test_path.push("Persist/0000000000000002.tracev3");
     let exclude_missing = false;
 
-    let log_data = parse_log(&test_path.display().to_string()).unwrap();
+    let log_data = parse_log(&test_path).unwrap();
 
     c.bench_function("Benching Building One High Sierra Log", |b| {
         b.iter(|| {
