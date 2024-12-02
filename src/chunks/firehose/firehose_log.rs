@@ -400,7 +400,7 @@ impl FirehosePreamble {
                     extract_string_size(private_string_start, u64::from(firehose_info.item_size))?;
 
                 private_string_start = private_data;
-                firehose_info.message_strings = private_string;
+                firehose_info.message_strings = private_string.to_owned();
             } else if firehose_info.item_type == private_number {
                 let (private_data, private_string) = FirehosePreamble::parse_item_number(
                     private_string_start,
@@ -608,7 +608,8 @@ impl FirehosePreamble {
     ) -> nom::IResult<&[u8], String> {
         // If message item size is greater than the remaining data, just use the rest of the data
         if message_size as usize > data.len() {
-            return extract_string_size(data, data.len() as u64);
+            let (rest, msg) = extract_string_size(data, data.len() as u64)?;
+            return Ok((rest, msg.to_owned()));
         }
 
         let (input, message_data) = take(message_size)(data)?;
@@ -626,7 +627,7 @@ impl FirehosePreamble {
         }
 
         let (_, message_string) = extract_string_size(message_data, u64::from(message_size))?;
-        Ok((input, message_string))
+        Ok((input, message_string.to_owned()))
     }
 
     // Parse the Firehose item number

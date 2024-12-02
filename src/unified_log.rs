@@ -585,7 +585,7 @@ impl Iterator for LogIterator<'_> {
                     );
                     let results = extract_string(&statedump.statedump_data);
                     match results {
-                        Ok((_, string_data)) => string_data,
+                        Ok((_, string_data)) => string_data.to_owned(),
                         Err(err) => {
                             error!(
                                 "[macos-unifiedlogs] Failed to extract string from statedump: {:?}",

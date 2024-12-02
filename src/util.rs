@@ -30,19 +30,19 @@ pub(crate) fn padding_size_four(data: u64) -> u64 {
 }
 
 /// Extract a size based on provided string size from Firehose string item entries
-pub(crate) fn extract_string_size(data: &[u8], message_size: u64) -> nom::IResult<&[u8], String> {
+pub(crate) fn extract_string_size(data: &[u8], message_size: u64) -> nom::IResult<&[u8], &str> {
     const NULL_STRING: u64 = 0;
     if message_size == NULL_STRING {
-        return Ok((data, String::from("(null)")));
+        return Ok((data, "(null)"));
     }
 
     // If our remaining data is smaller than the message string size just go until the end of the remaining data
     if data.len() < message_size as usize {
         // Get whole string message except end of string (0s)
         let (input, path) = take(data.len())(data)?;
-        let path_string = String::from_utf8(path.to_vec());
+        let path_string = from_utf8(path);
         match path_string {
-            Ok(results) => return Ok((input, results.trim_end_matches(char::from(0)).to_string())),
+            Ok(results) => return Ok((input, results.trim_end_matches(char::from(0)))),
             Err(err) => error!(
                 "[macos-unifiedlogs] Failed to get extract specific string size: {:?}",
                 err
@@ -52,15 +52,15 @@ pub(crate) fn extract_string_size(data: &[u8], message_size: u64) -> nom::IResul
 
     // Get whole string message except end of string (0s)
     let (input, path) = take(message_size)(data)?;
-    let path_string = String::from_utf8(path.to_vec());
+    let path_string = from_utf8(path);
     match path_string {
-        Ok(results) => return Ok((input, results.trim_end_matches(char::from(0)).to_string())),
+        Ok(results) => return Ok((input, results.trim_end_matches(char::from(0)))),
         Err(err) => error!(
             "[macos-unifiedlogs] Failed to get specific string: {:?}",
             err
         ),
     }
-    Ok((input, String::from("Could not find path string")))
+    Ok((input, "Could not find path string"))
 }
 
 const NULL_BYTE: u8 = 0;
@@ -90,7 +90,7 @@ pub(crate) fn non_empty_cstring(input: &[u8]) -> nom::IResult<&[u8], String> {
 }
 
 /// Extract strings that contain end of string characters
-pub(crate) fn extract_string(data: &[u8]) -> nom::IResult<&[u8], String> {
+pub(crate) fn extract_string(data: &[u8]) -> nom::IResult<&[u8], &str> {
     let last_value = data.last();
     match last_value {
         Some(value) => {
@@ -100,20 +100,20 @@ pub(crate) fn extract_string(data: &[u8]) -> nom::IResult<&[u8], String> {
                 let (input, path) = take(data.len())(data)?;
                 let path_string = from_utf8(path);
                 match path_string {
-                    Ok(results) => return Ok((input, results.to_string())),
+                    Ok(results) => return Ok((input, results)),
                     Err(err) => {
                         warn!(
                             "[macos-unifiedlogs] Failed to extract full string: {:?}",
                             err
                         );
-                        return Ok((input, String::from("Could not extract string")));
+                        return Ok((input, "Could not extract string"));
                     }
                 }
             }
         }
         None => {
             error!("[macos-unifiedlogs] Cannot extract string. Empty input.");
-            return Ok((data, String::from("Cannot extract string. Empty input.")));
+            return Ok((data, "Cannot extract string. Empty input."));
         }
     }
 
@@ -121,13 +121,13 @@ pub(crate) fn extract_string(data: &[u8]) -> nom::IResult<&[u8], String> {
     let path_string = from_utf8(path);
     match path_string {
         Ok(results) => {
-            return Ok((input, results.to_string()));
+            return Ok((input, results));
         }
         Err(err) => {
             warn!("[macos-unifiedlogs] Failed to get string: {:?}", err);
         }
     }
-    Ok((input, String::from("Could not extract string")))
+    Ok((input, "Could not extract string"))
 }
 
 /// Clean and format UUIDs to be pretty

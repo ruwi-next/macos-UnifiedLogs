@@ -200,7 +200,8 @@ fn parse_svcb(input: &[u8]) -> nom::IResult<&[u8], String> {
     const DNS_OVER_HTTPS: u32 = 0x800000;
     if unknown_type == DNS_OVER_HTTPS {
         let (input, url_size) = be_u8(input)?;
-        return extract_string_size(input, url_size.into());
+        let (input, s) = extract_string_size(input, url_size.into())?;
+        return Ok((input, s.to_owned()));
     }
 
     // ALPN = Application Layer Protocol Negotation

@@ -82,8 +82,8 @@ impl Statedump {
             let (_, decoder_library) = extract_string(library_data)?;
             let (_, decoder_type) = extract_string(type_data)?;
 
-            statedump_results.decoder_library = decoder_library;
-            statedump_results.decoder_type = decoder_type;
+            statedump_results.decoder_library = decoder_library.to_owned();
+            statedump_results.decoder_type = decoder_type.to_owned();
 
             input = remaining_input;
         }
@@ -91,7 +91,7 @@ impl Statedump {
         let (input, title_data) = take(string_size)(input)?;
         let (_, title_name) = extract_string(title_data)?;
 
-        statedump_results.title_name = title_name;
+        statedump_results.title_name = title_name.to_owned();
         statedump_results.chunk_tag = statedump_chunk_tag;
         statedump_results.chunk_subtag = statedump_chunk_sub_tag;
         statedump_results.chunk_data_size = statedump_chunk_data_size;

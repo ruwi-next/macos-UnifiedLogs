@@ -110,7 +110,7 @@ impl MessageData {
 
                     let (message_start, _) = take(offset)(string_data)?;
                     let (_, message_string) = extract_string(message_start)?;
-                    message_data.format_string = message_string;
+                    message_data.format_string = message_string.to_owned();
 
                     shared_string.uuids[ranges.unknown_uuid_index as usize]
                         .path_string
@@ -236,7 +236,7 @@ impl MessageData {
                     let (_, process_string) =
                         MessageData::uuidtext_image_path(footer_data, &data.entry_descriptors)?;
 
-                    message_data.format_string = message_string;
+                    message_data.format_string = message_string.to_owned();
                     // Process and library path are the same for log entries with main_exe
                     process_string.clone_into(&mut message_data.process);
                     message_data.library = process_string;
@@ -377,7 +377,7 @@ impl MessageData {
                     // Extract image path from current UUIDtext file
                     let (_, library_string) =
                         MessageData::uuidtext_image_path(footer_data, &data.entry_descriptors)?;
-                    message_data.format_string = message_string;
+                    message_data.format_string = message_string.to_owned();
                     message_data.library = library_string;
 
                     // Extract image path from second UUIDtext file
@@ -504,7 +504,7 @@ impl MessageData {
                         MessageData::get_uuid_image_path(&message_data.process_uuid, strings_data)?;
                     message_data.process = process_string;
 
-                    message_data.format_string = message_string;
+                    message_data.format_string = message_string.to_owned();
                     message_data.library = library_string;
                     return Ok((&[], message_data));
                 }
@@ -559,7 +559,8 @@ impl MessageData {
             image_library_offest += entry.entry_size;
         }
         let (library_start, _) = take(image_library_offest)(data)?;
-        extract_string(library_start)
+        let (rest, s) = extract_string(library_start)?;
+        Ok((rest, s.to_owned()))
     }
 
     /// Get the image path from provided `main_uuid` entry
