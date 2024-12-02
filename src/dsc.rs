@@ -189,7 +189,7 @@ impl SharedCacheStrings {
     fn get_paths(data: &[u8], path_offset: u32) -> nom::IResult<&[u8], String> {
         let (nom_path_offset, _) = take(path_offset)(data)?;
         let (_, path) = extract_string(nom_path_offset)?;
-        Ok((nom_path_offset, path))
+        Ok((nom_path_offset, path.to_owned()))
     }
 
     // After parsing the ranges and UUIDs remaining data are the base log entry strings

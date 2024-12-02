@@ -452,8 +452,8 @@ impl CatalogChunk {
 
                         let (input, _) = take(subsystems.category_offset)(subsystem_data)?;
                         let (_, category_string) = extract_string(input)?;
-                        subsystem_info.subsystem = subsystem_string;
-                        subsystem_info.category = category_string;
+                        subsystem_info.subsystem = subsystem_string.to_owned();
+                        subsystem_info.category = category_string.to_owned();
                         return Ok((input, subsystem_info));
                     }
                 }

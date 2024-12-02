@@ -98,11 +98,11 @@ impl SimpleDump {
 
         if !subsystem_string.is_empty() {
             let (_, simpledump_subsystem_string) = extract_string(subsystem_string)?;
-            simpledump_resuls.subsystem = simpledump_subsystem_string;
+            simpledump_resuls.subsystem = simpledump_subsystem_string.to_owned();
         }
         if !message_string.is_empty() {
             let (_, simpledump_message_string) = extract_string(message_string)?;
-            simpledump_resuls.message_string = simpledump_message_string;
+            simpledump_resuls.message_string = simpledump_message_string.to_owned();
         }
         Ok((input, simpledump_resuls))
     }
